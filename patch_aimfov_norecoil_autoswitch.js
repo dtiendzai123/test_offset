@@ -159,7 +159,7 @@ try {
 
         const playerPos = { x: 0, y: 0, z: 0 };
         const crosshair = { x: 0, y: 0, z: 0 };
-
+const enemyBaseList = [0xA001234, 0xA004567, 0xA00789A];
         const enemyList = json.data
             .filter(entry => entry?.position)
             .map(entry => {
