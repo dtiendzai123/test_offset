@@ -1,3 +1,4 @@
+
 // ==UserScript==
 // @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest + Full Aim Assist + TouchDrag + HeadLock
 // @namespace    http://garena.freefire/
@@ -30,9 +31,7 @@ const AIMFOV_REPLACE = `FF FF 00 00 00 00 00 00 C0 3F 0A D7 A3 3B 0A D7 A3 3B 8F
 const NORECOIL_FIND = `00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 7A 44 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2 00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
 const NORECOIL_REPLACE = `00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 EF 44 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2 00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
 
-
 const HEAD_LOCK_RADIUS = 9999.0;
-const BoneOffset = { head: 0x3D8, chest: 0x50, auto: dist => dist < 10 ? 0x3D8 : 0x50 };
 
 // === Helpers ===
 const Vector3 = {
@@ -41,6 +40,7 @@ const Vector3 = {
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 };
+
 class AimSmoother {
     constructor(smoothFactor = 0.65) {
         this.lastPos = null;
@@ -63,7 +63,7 @@ class AimSmoother {
         return smoothed;
     }
 }
-// === Input States ===
+
 let lastEnemyHeadPos = null;
 let lastPlayerPos = null;
 let isTouchDragging = false;
@@ -72,14 +72,9 @@ if (typeof document !== 'undefined') {
     document.addEventListener("touchstart", () => isTouchDragging = true);
     document.addEventListener("touchend", () => isTouchDragging = false);
 }
-let predictedHead = fixBulletDrift(enemy.headPos, playerPos);
-let corrected = correctCrosshairOffset(crosshairPos, predictedHead);
-let smoothedAim = aimSmoother.smooth(corrected);
 
-// Gán lại vào hệ thống aim
-crosshairPos.x = smoothedAim.x;
-crosshairPos.y = smoothedAim.y;
-crosshairPos.z = smoothedAim.z;
+const aimSmoother = new AimSmoother(0.65);
+
 // === Core Functions ===
 function fixBulletDrift(targetPos, playerPos, bulletSpeed = 95, predictionFactor = 1.0) {
     const direction = {
@@ -88,17 +83,16 @@ function fixBulletDrift(targetPos, playerPos, bulletSpeed = 95, predictionFactor
         z: targetPos.z - playerPos.z
     };
 
-    // Ước lượng thời gian đạn bay đến mục tiêu
     const distance = Vector3.distance(playerPos, targetPos);
     const travelTime = distance / bulletSpeed;
 
-    // Dự đoán vị trí tương lai của enemy (simple linear prediction)
     return {
         x: targetPos.x + (direction.x * predictionFactor * travelTime),
         y: targetPos.y + (direction.y * predictionFactor * travelTime),
         z: targetPos.z + (direction.z * predictionFactor * travelTime)
     };
 }
+
 function correctCrosshairOffset(crosshair, targetHead, offsetThreshold = 0.05) {
     const dx = Math.abs(crosshair.x - targetHead.x);
     const dy = Math.abs(crosshair.y - targetHead.y);
@@ -111,13 +105,13 @@ function correctCrosshairOffset(crosshair, targetHead, offsetThreshold = 0.05) {
             z: targetHead.z
         };
     }
-    return crosshair; // No correction needed
+    return crosshair;
 }
+
 function updateAimbot(crosshair, playerPos, enemy) {
     const headPos = enemy.headPos;
     const chestPos = enemy.chestPos;
 
-    // Tính chuyển động
     let enemyVelocity = lastEnemyHeadPos ? Vector3.distance(headPos, lastEnemyHeadPos) : 0;
     let playerVelocity = lastPlayerPos ? Vector3.distance(playerPos, lastPlayerPos) : 0;
     lastEnemyHeadPos = { ...headPos };
@@ -127,10 +121,13 @@ function updateAimbot(crosshair, playerPos, enemy) {
     const isPlayerMoving = playerVelocity > 0.01;
     const isDynamicLock = isEnemyMoving || isPlayerMoving;
 
-    // Kiểm tra trạng thái tâm đỏ
     let isRedDotActive = Vector3.distance(crosshair, headPos) < 0.15;
 
-    return magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isRedDotActive);
+    let predictedHead = fixBulletDrift(headPos, playerPos);
+    let corrected = correctCrosshairOffset(crosshair, predictedHead);
+    let smoothedAim = aimSmoother.smooth(corrected);
+
+    return magneticAimChestToHead(smoothedAim, chestPos, headPos, isDynamicLock, isRedDotActive);
 }
 
 function magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isRedDotActive) {
@@ -197,7 +194,6 @@ try {
                 entry.value = "data:application/octet-stream;base64," + patched;
             }
 
-            // Force aim/accuracy
             entry.ForceHeadshot = true;
             entry.IsCritical = true;
             entry.Priority = 9999;
@@ -215,7 +211,6 @@ try {
             return entry;
         });
 
-        // === AIM LOOP ===
         const playerPos = { x: 0, y: 0, z: 0 };
         const crosshair = { x: 0, y: 0, z: 0 };
         const enemyList = json.data.filter(e => e?.position).map(e => {
