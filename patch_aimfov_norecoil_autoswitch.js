@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest
+// @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest + Full Aim Assist
 // @namespace    http://garena.freefire/
 // @match        *api.ff.garena.com*
 // @run-at       response
@@ -47,6 +47,77 @@ const NORECOIL_REPLACE = `
 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2
 00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
 
+// === Bone Offset Definitions ===
+const BoneOffset = {
+    head: 0x3D8,
+    chest: 0x50,
+    auto: (dist) => dist < 10 ? 0x3D8 : 0x50 // Gần: head, Xa: chest
+};
+
+// === Helper Aim Functions ===
+function readVector3(address) {
+    return { x: 0, y: 0, z: 0 }; // placeholder
+}
+function aimTo(vec3) {
+    // Điều chỉnh tâm ngắm tới vị trí vec3
+}
+function triggerFire() {
+    // Gọi chức năng bắn
+}
+function cameraLookAt(x, y, z) {
+    // Điều chỉnh camera tới tọa độ
+}
+
+// === Aim Assist: AutoLockNearestTarget ===
+function autoLockNearest(playerPos, enemyList) {
+    let minDist = Infinity;
+    let target = null;
+    for (let enemy of enemyList) {
+        let dx = enemy.pos.x - playerPos.x;
+        let dy = enemy.pos.y - playerPos.y;
+        let dz = enemy.pos.z - playerPos.z;
+        let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        if (dist < minDist) {
+            minDist = dist;
+            target = enemy;
+        }
+    }
+    return target;
+}
+
+// === Magnet Aim ===
+function magneticAim(current, target) {
+    const strength = 0.6;
+    return {
+        x: current.x + (target.x - current.x) * strength,
+        y: current.y + (target.y - current.y) * strength,
+        z: current.z + (target.z - current.z) * strength
+    };
+}
+
+// === Fire if Locked ===
+function fireIfLocked(crosshair, target) {
+    const dx = crosshair.x - target.x;
+    const dy = crosshair.y - target.y;
+    const dz = crosshair.z - target.z;
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if (dist < 1.0) {
+        triggerFire();
+        console.log("🔥 Auto Fire Triggered");
+    }
+}
+
+// === Chest to Head Switch ===
+function immediateChestToHeadSwitch(playerPos, enemyBase) {
+    const chestPos = readVector3(enemyBase + BoneOffset.chest);
+    aimTo(chestPos);
+    const headPos = readVector3(enemyBase + BoneOffset.head);
+    setTimeout(() => {
+        aimTo(headPos);
+        console.log("🎯 Switch Chest → Head");
+    }, 0);
+}
+
 try {
     let json = JSON.parse(body);
     if (json?.data) {
@@ -57,8 +128,35 @@ try {
                 patched = patchBinary(patched, NORECOIL_FIND, NORECOIL_REPLACE);
                 entry.value = "data:application/octet-stream;base64," + patched;
             }
+
+            // ✅ Tính năng 1-2-4:
+            entry.ForceHeadshot = true;
+            entry.IsCritical = true;
+            entry.Priority = 9999;
+            entry.AlwaysEnable = true;
+            entry.HighAccuracy = true;
+            entry.DisableSpread = true;
+            entry.BulletLinearity = 1.0;
+
             return entry;
         });
+
+        // 📌 Giả lập tình huống xử lý AutoLockNearestTarget
+        const playerPos = { x: 0, y: 0, z: 0 };
+        const enemyList = [
+            { pos: { x: 4, y: 0, z: 0 }, headPos: { x: 4, y: 1.6, z: 0 } },
+            { pos: { x: 2, y: 0, z: 0 }, headPos: { x: 2, y: 1.6, z: 0 } }
+        ];
+        const crosshair = { x: 0, y: 0, z: 0 };
+
+        const target = autoLockNearest(playerPos, enemyList);
+        if (target) {
+            const adjustedAim = magneticAim(crosshair, target.headPos);
+            aimTo(adjustedAim);            // Magnet Aim
+            cameraLookAt(target.pos.x, target.pos.y, target.pos.z); // Camera lock
+            fireIfLocked(adjustedAim, target.headPos); // Auto fire
+        }
+
         $done({ body: JSON.stringify(json) });
     } else {
         $done({ body });
@@ -66,38 +164,4 @@ try {
 } catch (e) {
     console.log("❌ JSON Parse Error:", e);
     $done({ body });
-}
-
-// === Bone Offset + AutoSwitch ===
-
-// === Bone Offset Definitions ===
-const BoneOffset = {
-    head: 0x3D8,
-    chest: 0x50
-};
-
-// === Immediate Chest-to-Head Switch Logic ===
-function immediateChestToHeadSwitch(playerPos, enemyBase) {
-    const chestOffset = BoneOffset.chest;
-    const headOffset = BoneOffset.head;
-
-    // 1. Lấy vị trí chest đầu tiên
-    const chestPos = readVector3(enemyBase + chestOffset);
-    aimTo(chestPos);  // Ban đầu nhắm vào ngực
-
-    // 2. Ngay sau đó (1 frame hoặc không delay), switch sang head
-    const headPos = readVector3(enemyBase + headOffset);
-    setTimeout(() => {
-        aimTo(headPos); // Snap ngay lên đầu
-        console.log("🎯 Switch Chest → Head");
-    }, 0); // Không delay, thực hiện ngay
-}
-
-// === Ví dụ dùng Auto Switch ===
-function getTargetBoneOffset(playerPos, enemyPos) {
-    let dx = enemyPos.x - playerPos.x;
-    let dy = enemyPos.y - playerPos.y;
-    let dz = enemyPos.z - playerPos.z;
-    let distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    return BoneOffset.auto(distance);
 }
