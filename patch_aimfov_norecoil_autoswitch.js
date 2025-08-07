@@ -37,7 +37,45 @@ const BoneOffset = {
     chest: 0x50,
     auto: (dist) => dist < 10 ? 0x3D8 : 0x50
 };
+const Vector3 = {
+    distance: (a, b) => {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dz = a.z - b.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+};
+let lastEnemyHeadPos = null;
+let lastPlayerPos = null;
 
+function updateAimbot(crosshair, playerPos, enemy) {
+    const headPos = enemy.headPos;
+    const chestPos = enemy.chestPos;
+
+    // ✅ Xác định enemy đang di chuyển?
+    let enemyVelocity = 0;
+    if (lastEnemyHeadPos) {
+        enemyVelocity = Vector3.distance(headPos, lastEnemyHeadPos);
+    }
+    lastEnemyHeadPos = { ...headPos };
+
+    // ✅ Xác định player đang xoay/ngắm?
+    let playerVelocity = 0;
+    if (lastPlayerPos) {
+        playerVelocity = Vector3.distance(playerPos, lastPlayerPos);
+    }
+    lastPlayerPos = { ...playerPos };
+
+    const isEnemyMoving = enemyVelocity > 0.01;
+    const isPlayerMoving = playerVelocity > 0.01;
+
+    // ✅ Kích hoạt chế độ lock mạnh nếu có chuyển động
+    const isDynamicLock = isEnemyMoving || isPlayerMoving;
+
+    // ✅ Truyền cờ vào magnetic system
+    const newAim = magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock);
+    return newAim;
+}
 // Head Lock Tracking Radius
 const HEAD_LOCK_RADIUS = 9999.0; // khoảng cách tính là đã headlock
 
@@ -97,9 +135,7 @@ function autoLockNearest(playerPos, enemyList) {
     return target;
 }
 
-// Magnetic Aim: Chest → Head hỗ trợ touch drag & head lock radius
-// Magnetic Aim: Chest → Head hỗ trợ touch drag & head lock + hạn chế vượt đầu
-function magneticAimChestToHead(crosshair, chestPos, headPos) {
+function magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock) {
     const dx = crosshair.x - chestPos.x;
     const dy = crosshair.y - chestPos.y;
     const dz = crosshair.z - chestPos.z;
@@ -112,34 +148,37 @@ function magneticAimChestToHead(crosshair, chestPos, headPos) {
     );
 
     let dragForce = 0.4;
- // ✅ Hard lock nếu tâm ngắm hiện đỏ
+
     if (isRedDotActive) {
-        console.log("🔥 RED DOT ACTIVE → HEAD SNAP LOCK");
         return { x: headPos.x, y: headPos.y, z: headPos.z };
     }
 
-    
-    if (distToHead < HEAD_LOCK_RADIUS) {
-        dragForce = 0.95;
-        console.log("🎯 Head Lock Engaged");
-    } else if (isTouchDragging && distToChest < 1.2) {
-        dragForce = 0.9;
-    } else if (distToChest < 1.2) {
-        dragForce = 0.75;
+    // ✅ Dynamic movement lock → tăng lực kéo lên đầu
+    if (isDynamicLock) {
+        if (distToHead < 0.4) {
+            dragForce = 0.96;
+        } else {
+            dragForce = 0.85;
+        }
+    } else {
+        if (distToHead < 0.3) {
+            dragForce = 0.8;
+        } else if (distToChest < 1.2) {
+            dragForce = 0.65;
+        }
     }
 
     let newX = crosshair.x + (headPos.x - crosshair.x) * dragForce;
     let newY = crosshair.y + (headPos.y - crosshair.y) * dragForce;
     let newZ = crosshair.z + (headPos.z - crosshair.z) * dragForce;
 
-    // ✅ Giới hạn Y không được vượt quá đầu
+    // ✅ Không vượt quá đầu
     if (newY > headPos.y) {
         newY = headPos.y;
     }
 
     return { x: newX, y: newY, z: newZ };
 }
-
 // Auto Fire nếu gần head
 function fireIfLocked(crosshair, targetHead) {
     const dx = crosshair.x - targetHead.x;
