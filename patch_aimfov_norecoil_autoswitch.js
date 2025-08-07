@@ -41,7 +41,28 @@ const Vector3 = {
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 };
+class AimSmoother {
+    constructor(smoothFactor = 0.65) {
+        this.lastPos = null;
+        this.smoothFactor = smoothFactor;
+    }
 
+    smooth(currentPos) {
+        if (!this.lastPos) {
+            this.lastPos = currentPos;
+            return currentPos;
+        }
+
+        const smoothed = {
+            x: this.lastPos.x + (currentPos.x - this.lastPos.x) * this.smoothFactor,
+            y: this.lastPos.y + (currentPos.y - this.lastPos.y) * this.smoothFactor,
+            z: this.lastPos.z + (currentPos.z - this.lastPos.z) * this.smoothFactor
+        };
+
+        this.lastPos = smoothed;
+        return smoothed;
+    }
+}
 // === Input States ===
 let lastEnemyHeadPos = null;
 let lastPlayerPos = null;
@@ -51,8 +72,47 @@ if (typeof document !== 'undefined') {
     document.addEventListener("touchstart", () => isTouchDragging = true);
     document.addEventListener("touchend", () => isTouchDragging = false);
 }
+let predictedHead = fixBulletDrift(enemy.headPos, playerPos);
+let corrected = correctCrosshairOffset(crosshairPos, predictedHead);
+let smoothedAim = aimSmoother.smooth(corrected);
 
+// Gán lại vào hệ thống aim
+crosshairPos.x = smoothedAim.x;
+crosshairPos.y = smoothedAim.y;
+crosshairPos.z = smoothedAim.z;
 // === Core Functions ===
+function fixBulletDrift(targetPos, playerPos, bulletSpeed = 95, predictionFactor = 1.0) {
+    const direction = {
+        x: targetPos.x - playerPos.x,
+        y: targetPos.y - playerPos.y,
+        z: targetPos.z - playerPos.z
+    };
+
+    // Ước lượng thời gian đạn bay đến mục tiêu
+    const distance = Vector3.distance(playerPos, targetPos);
+    const travelTime = distance / bulletSpeed;
+
+    // Dự đoán vị trí tương lai của enemy (simple linear prediction)
+    return {
+        x: targetPos.x + (direction.x * predictionFactor * travelTime),
+        y: targetPos.y + (direction.y * predictionFactor * travelTime),
+        z: targetPos.z + (direction.z * predictionFactor * travelTime)
+    };
+}
+function correctCrosshairOffset(crosshair, targetHead, offsetThreshold = 0.05) {
+    const dx = Math.abs(crosshair.x - targetHead.x);
+    const dy = Math.abs(crosshair.y - targetHead.y);
+    const dz = Math.abs(crosshair.z - targetHead.z);
+
+    if (dx > offsetThreshold || dy > offsetThreshold || dz > offsetThreshold) {
+        return {
+            x: targetHead.x,
+            y: targetHead.y,
+            z: targetHead.z
+        };
+    }
+    return crosshair; // No correction needed
+}
 function updateAimbot(crosshair, playerPos, enemy) {
     const headPos = enemy.headPos;
     const chestPos = enemy.chestPos;
