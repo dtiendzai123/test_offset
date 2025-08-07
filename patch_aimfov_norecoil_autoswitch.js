@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest + Full Aim Assist + TouchDrag
+// @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest + Full Aim Assist + TouchDrag + HeadLock
 // @namespace    http://garena.freefire/
 // @match        *api.ff.garena.com*
 // @run-at       response
@@ -31,14 +31,17 @@ const AIMFOV_REPLACE = `FF FF 00 00 00 00 00 00 C0 3F 0A D7 A3 3B 0A D7 A3 3B 8F
 const NORECOIL_FIND = `00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 7A 44 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2 00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
 const NORECOIL_REPLACE = `00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 EF 44 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2 00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
 
-// === Bone Offset Definitions ===
+// Bone Offset Definitions
 const BoneOffset = {
     head: 0x3D8,
     chest: 0x50,
     auto: (dist) => dist < 10 ? 0x3D8 : 0x50
 };
 
-// === Touch Drag Detection ===
+// Head Lock Tracking Radius
+const HEAD_LOCK_RADIUS = 0.35; // khoảng cách tính là đã headlock
+
+// Touch Drag Detection
 let isTouchDragging = false;
 
 if (typeof document !== 'undefined') {
@@ -50,21 +53,27 @@ if (typeof document !== 'undefined') {
     });
 }
 
-// === Helper Aim Functions ===
+// Placeholder: đọc Vector3 tại địa chỉ (giả lập)
 function readVector3(address) {
-    return { x: 0, y: 0, z: 0 }; // placeholder
-}
-function aimTo(vec3) {
-    // Điều chỉnh tâm ngắm tới vị trí vec3
-}
-function triggerFire() {
-    // Gọi chức năng bắn
-}
-function cameraLookAt(x, y, z) {
-    // Điều chỉnh camera tới tọa độ
+    return { x: 0, y: 0, z: 0 }; // thực tế cần native hook
 }
 
-// === AutoLockNearest ===
+// Giả lập chức năng điều tâm
+function aimTo(vec3) {
+    console.log("🎯 AimTo:", vec3);
+}
+
+// Giả lập bắn
+function triggerFire() {
+    console.log("🔫 Fire Triggered");
+}
+
+// Giả lập quay camera
+function cameraLookAt(x, y, z) {
+    console.log("🎥 LookAt:", x, y, z);
+}
+
+// Tìm mục tiêu gần nhất
 function autoLockNearest(playerPos, enemyList) {
     let minDist = Infinity;
     let target = null;
@@ -72,7 +81,7 @@ function autoLockNearest(playerPos, enemyList) {
         let dx = enemy.pos.x - playerPos.x;
         let dy = enemy.pos.y - playerPos.y;
         let dz = enemy.pos.z - playerPos.z;
-        let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        let dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (dist < minDist) {
             minDist = dist;
             target = enemy;
@@ -81,20 +90,27 @@ function autoLockNearest(playerPos, enemyList) {
     return target;
 }
 
-// === Magnet Aim: Chest to Head Support + Touch Drag ===
+// Magnetic Aim: Chest → Head hỗ trợ touch drag & head lock radius
 function magneticAimChestToHead(crosshair, chestPos, headPos) {
     const dx = crosshair.x - chestPos.x;
     const dy = crosshair.y - chestPos.y;
     const dz = crosshair.z - chestPos.z;
     const distToChest = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-    const nearChest = distToChest < 1.2;
+    const distToHead = Math.sqrt(
+        Math.pow(crosshair.x - headPos.x, 2) +
+        Math.pow(crosshair.y - headPos.y, 2) +
+        Math.pow(crosshair.z - headPos.z, 2)
+    );
 
-    // 🔥 Thay đổi dragForce nếu người chơi đang drag trên mobile
     let dragForce = 0.4;
-    if (isTouchDragging && nearChest) {
+
+    if (distToHead < HEAD_LOCK_RADIUS) {
+        dragForce = 0.95;
+        console.log("🎯 Head Lock Engaged");
+    } else if (isTouchDragging && distToChest < 1.2) {
         dragForce = 0.9;
-    } else if (nearChest) {
+    } else if (distToChest < 1.2) {
         dragForce = 0.75;
     }
 
@@ -105,19 +121,20 @@ function magneticAimChestToHead(crosshair, chestPos, headPos) {
     };
 }
 
-// === Auto Fire if Aim Close ===
-function fireIfLocked(crosshair, target) {
-    const dx = crosshair.x - target.x;
-    const dy = crosshair.y - target.y;
-    const dz = crosshair.z - target.z;
-    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-    if (dist < 1.0) {
+// Auto Fire nếu gần head
+function fireIfLocked(crosshair, targetHead) {
+    const dx = crosshair.x - targetHead.x;
+    const dy = crosshair.y - targetHead.y;
+    const dz = crosshair.z - targetHead.z;
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (dist < HEAD_LOCK_RADIUS) {
+        aimTo(targetHead); // snap chuẩn vào đầu
         triggerFire();
-        console.log("🔥 Auto Fire Triggered");
+        console.log("🔒 Head Lock Fire Triggered");
     }
 }
 
-// === Chest to Head Snap ===
+// Chest to Head Snap ngay lập tức
 function immediateChestToHeadSwitch(playerPos, enemyBase) {
     const chestPos = readVector3(enemyBase + BoneOffset.chest);
     aimTo(chestPos);
@@ -128,6 +145,7 @@ function immediateChestToHeadSwitch(playerPos, enemyBase) {
     }, 0);
 }
 
+// Xử lý phản hồi JSON từ game
 try {
     let json = JSON.parse(body);
     if (json?.data) {
@@ -139,7 +157,7 @@ try {
                 entry.value = "data:application/octet-stream;base64," + patched;
             }
 
-            // ✅ Force aim/accuracy tweaks
+            // Force aim/accuracy tweaks
             entry.ForceHeadshot = true;
             entry.IsCritical = true;
             entry.Priority = 9999;
@@ -157,9 +175,9 @@ try {
             return entry;
         });
 
+        // === AIM PROCESSING ===
         const playerPos = { x: 0, y: 0, z: 0 };
         const crosshair = { x: 0, y: 0, z: 0 };
-const enemyBaseList = [0xA001234, 0xA004567, 0xA00789A];
         const enemyList = json.data
             .filter(entry => entry?.position)
             .map(entry => {
