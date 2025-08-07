@@ -137,16 +137,27 @@ try {
             entry.HighAccuracy = true;
             entry.DisableSpread = true;
             entry.BulletLinearity = 1.0;
+      if (entry.position) {
+            entry.position.x = -0.0456970781;  // hoặc bất kỳ vị trí nào bạn muốn
+            entry.position.y = -0.004478302;
+            entry.position.z = -0.0200432576;
+        }
 
+       
             return entry;
         });
 
         // 📌 Giả lập tình huống xử lý AutoLockNearestTarget
         const playerPos = { x: 0, y: 0, z: 0 };
-        const enemyList = [
-            { pos: { x: 4, y: 0, z: 0 }, headPos: { x: 4, y: 1.6, z: 0 } },
-            { pos: { x: 2, y: 0, z: 0 }, headPos: { x: 2, y: 1.6, z: 0 } }
-        ];
+        const enemyList = json.data
+  .filter(entry => entry?.position) // lọc entry có vị trí
+  .map(entry => {
+    const pos = entry.position;
+    return {
+      pos: { x: pos.x, y: pos.y, z: pos.z },
+      headPos: { x: pos.x, y: pos.y + 1.6, z: pos.z } // head cao hơn 1.6 đơn vị
+    };
+  });
         const crosshair = { x: 0, y: 0, z: 0 };
 
         const target = autoLockNearest(playerPos, enemyList);
