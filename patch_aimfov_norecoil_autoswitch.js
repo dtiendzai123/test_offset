@@ -39,7 +39,7 @@ const BoneOffset = {
 };
 
 // Head Lock Tracking Radius
-const HEAD_LOCK_RADIUS = 0.35; // khoảng cách tính là đã headlock
+const HEAD_LOCK_RADIUS = 9999.0; // khoảng cách tính là đã headlock
 
 // Touch Drag Detection
 let isTouchDragging = false;
@@ -91,6 +91,7 @@ function autoLockNearest(playerPos, enemyList) {
 }
 
 // Magnetic Aim: Chest → Head hỗ trợ touch drag & head lock radius
+// Magnetic Aim: Chest → Head hỗ trợ touch drag & head lock + hạn chế vượt đầu
 function magneticAimChestToHead(crosshair, chestPos, headPos) {
     const dx = crosshair.x - chestPos.x;
     const dy = crosshair.y - chestPos.y;
@@ -114,11 +115,16 @@ function magneticAimChestToHead(crosshair, chestPos, headPos) {
         dragForce = 0.75;
     }
 
-    return {
-        x: crosshair.x + (headPos.x - crosshair.x) * dragForce,
-        y: crosshair.y + (headPos.y - crosshair.y) * dragForce,
-        z: crosshair.z + (headPos.z - crosshair.z) * dragForce
-    };
+    let newX = crosshair.x + (headPos.x - crosshair.x) * dragForce;
+    let newY = crosshair.y + (headPos.y - crosshair.y) * dragForce;
+    let newZ = crosshair.z + (headPos.z - crosshair.z) * dragForce;
+
+    // ✅ Giới hạn Y không được vượt quá đầu
+    if (newY > headPos.y) {
+        newY = headPos.y;
+    }
+
+    return { x: newX, y: newY, z: newZ };
 }
 
 // Auto Fire nếu gần head
