@@ -43,7 +43,14 @@ const HEAD_LOCK_RADIUS = 9999.0; // khoảng cách tính là đã headlock
 
 // Touch Drag Detection
 let isTouchDragging = false;
+let isRedDotActive = false;
 
+// Ví dụ: kiểm tra nếu crosshair rất gần đầu → giả lập “tâm ngắm đỏ”
+if (Vector3.distance(crosshair, headPos) < 0.15) {
+    isRedDotActive = true;
+} else {
+    isRedDotActive = false;
+}
 if (typeof document !== 'undefined') {
     document.addEventListener("touchstart", () => {
         isTouchDragging = true;
@@ -105,7 +112,13 @@ function magneticAimChestToHead(crosshair, chestPos, headPos) {
     );
 
     let dragForce = 0.4;
+ // ✅ Hard lock nếu tâm ngắm hiện đỏ
+    if (isRedDotActive) {
+        console.log("🔥 RED DOT ACTIVE → HEAD SNAP LOCK");
+        return { x: headPos.x, y: headPos.y, z: headPos.z };
+    }
 
+    
     if (distToHead < HEAD_LOCK_RADIUS) {
         dragForce = 0.95;
         console.log("🎯 Head Lock Engaged");
