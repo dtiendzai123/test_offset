@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest + Full Aim Assist
+// @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest + Full Aim Assist + TouchDrag
 // @namespace    http://garena.freefire/
 // @match        *api.ff.garena.com*
 // @run-at       response
@@ -25,34 +25,30 @@ function patchBinary(base64, findHex, replaceHex) {
 }
 
 // HEX patterns
-const AIMFOV_FIND = `
-70 42 00 00 00 00 00 00 C0 3F
-0A D7 A3 3B 0A D7 A3 3B 8F C2
-75 3D AE 47 E1 3D 9A 99 19 3E
-CD CC 4C 3E A4 70 FD 3E`;
+const AIMFOV_FIND = `70 42 00 00 00 00 00 00 C0 3F 0A D7 A3 3B 0A D7 A3 3B 8F C2 75 3D AE 47 E1 3D 9A 99 19 3E CD CC 4C 3E A4 70 FD 3E`;
+const AIMFOV_REPLACE = `FF FF 00 00 00 00 00 00 C0 3F 0A D7 A3 3B 0A D7 A3 3B 8F C2 75 3D AE 47 E1 3D 9A 99 19 3E CD CC 4C 3E A4 70 FD 3E`;
 
-const AIMFOV_REPLACE = `
-FF FF 00 00 00 00 00 00 C0 3F
-0A D7 A3 3B 0A D7 A3 3B 8F C2
-75 3D AE 47 E1 3D 9A 99 19 3E
-CD CC 4C 3E A4 70 FD 3E`;
-
-const NORECOIL_FIND = `
-00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 7A 44
-F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2
-00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
-
-const NORECOIL_REPLACE = `
-00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 EF 44
-F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2
-00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
+const NORECOIL_FIND = `00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 7A 44 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2 00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
+const NORECOIL_REPLACE = `00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 EF 44 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0 4D E2 00 50 A0 E1 10 1A 08 EE 08 40 95 E5 00 00 54 E3`;
 
 // === Bone Offset Definitions ===
 const BoneOffset = {
     head: 0x3D8,
     chest: 0x50,
-    auto: (dist) => dist < 10 ? 0x3D8 : 0x50 // Gần: head, Xa: chest
+    auto: (dist) => dist < 10 ? 0x3D8 : 0x50
 };
+
+// === Touch Drag Detection ===
+let isTouchDragging = false;
+
+if (typeof document !== 'undefined') {
+    document.addEventListener("touchstart", () => {
+        isTouchDragging = true;
+    });
+    document.addEventListener("touchend", () => {
+        isTouchDragging = false;
+    });
+}
 
 // === Helper Aim Functions ===
 function readVector3(address) {
@@ -68,7 +64,7 @@ function cameraLookAt(x, y, z) {
     // Điều chỉnh camera tới tọa độ
 }
 
-// === Aim Assist: AutoLockNearestTarget ===
+// === AutoLockNearest ===
 function autoLockNearest(playerPos, enemyList) {
     let minDist = Infinity;
     let target = null;
@@ -85,17 +81,31 @@ function autoLockNearest(playerPos, enemyList) {
     return target;
 }
 
-// === Magnet Aim ===
-function magneticAim(current, target) {
-    const strength = 1.0;
+// === Magnet Aim: Chest to Head Support + Touch Drag ===
+function magneticAimChestToHead(crosshair, chestPos, headPos) {
+    const dx = crosshair.x - chestPos.x;
+    const dy = crosshair.y - chestPos.y;
+    const dz = crosshair.z - chestPos.z;
+    const distToChest = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    const nearChest = distToChest < 1.2;
+
+    // 🔥 Thay đổi dragForce nếu người chơi đang drag trên mobile
+    let dragForce = 0.4;
+    if (isTouchDragging && nearChest) {
+        dragForce = 0.9;
+    } else if (nearChest) {
+        dragForce = 0.75;
+    }
+
     return {
-        x: current.x + (target.x - current.x) * strength,
-        y: current.y + (target.y - current.y) * strength,
-        z: current.z + (target.z - current.z) * strength
+        x: crosshair.x + (headPos.x - crosshair.x) * dragForce,
+        y: crosshair.y + (headPos.y - crosshair.y) * dragForce,
+        z: crosshair.z + (headPos.z - crosshair.z) * dragForce
     };
 }
 
-// === Fire if Locked ===
+// === Auto Fire if Aim Close ===
 function fireIfLocked(crosshair, target) {
     const dx = crosshair.x - target.x;
     const dy = crosshair.y - target.y;
@@ -107,7 +117,7 @@ function fireIfLocked(crosshair, target) {
     }
 }
 
-// === Chest to Head Switch ===
+// === Chest to Head Snap ===
 function immediateChestToHeadSwitch(playerPos, enemyBase) {
     const chestPos = readVector3(enemyBase + BoneOffset.chest);
     aimTo(chestPos);
@@ -129,7 +139,7 @@ try {
                 entry.value = "data:application/octet-stream;base64," + patched;
             }
 
-            // ✅ Tính năng 1-2-4:
+            // ✅ Force aim/accuracy tweaks
             entry.ForceHeadshot = true;
             entry.IsCritical = true;
             entry.Priority = 9999;
@@ -137,35 +147,36 @@ try {
             entry.HighAccuracy = true;
             entry.DisableSpread = true;
             entry.BulletLinearity = 1.0;
-      if (entry.position) {
-            entry.position.x = -0.0456970781;  // hoặc bất kỳ vị trí nào bạn muốn
-            entry.position.y = -0.004478302;
-            entry.position.z = -0.0200432576;
-        }
 
-       
+            if (entry.position) {
+                entry.position.x = -0.0456970781;
+                entry.position.y = -0.004478302;
+                entry.position.z = -0.0200432576;
+            }
+
             return entry;
         });
 
-        // 📌 Giả lập tình huống xử lý AutoLockNearestTarget
         const playerPos = { x: 0, y: 0, z: 0 };
-        const enemyList = json.data
-  .filter(entry => entry?.position) // lọc entry có vị trí
-  .map(entry => {
-    const pos = entry.position;
-    return {
-      pos: { x: pos.x, y: pos.y, z: pos.z },
-      headPos: { x: pos.x, y: pos.y + 1.6, z: pos.z } // head cao hơn 1.6 đơn vị
-    };
-  });
         const crosshair = { x: 0, y: 0, z: 0 };
+
+        const enemyList = json.data
+            .filter(entry => entry?.position)
+            .map(entry => {
+                const pos = entry.position;
+                return {
+                    pos: { x: pos.x, y: pos.y, z: pos.z },
+                    chestPos: { x: pos.x, y: pos.y + 1.0, z: pos.z },
+                    headPos: { x: pos.x, y: pos.y + 1.6, z: pos.z }
+                };
+            });
 
         const target = autoLockNearest(playerPos, enemyList);
         if (target) {
-            const adjustedAim = magneticAim(crosshair, target.headPos);
-            aimTo(adjustedAim);            // Magnet Aim
-            cameraLookAt(target.pos.x, target.pos.y, target.pos.z); // Camera lock
-            fireIfLocked(adjustedAim, target.headPos); // Auto fire
+            const adjustedAim = magneticAimChestToHead(crosshair, target.chestPos, target.headPos);
+            aimTo(adjustedAim);
+            cameraLookAt(target.pos.x, target.pos.y, target.pos.z);
+            fireIfLocked(adjustedAim, target.headPos);
         }
 
         $done({ body: JSON.stringify(json) });
