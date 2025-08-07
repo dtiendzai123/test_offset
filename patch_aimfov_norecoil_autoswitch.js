@@ -87,7 +87,7 @@ function autoLockNearest(playerPos, enemyList) {
 
 // === Magnet Aim ===
 function magneticAim(current, target) {
-    const strength = 0.6;
+    const strength = 1.0;
     return {
         x: current.x + (target.x - current.x) * strength,
         y: current.y + (target.y - current.y) * strength,
