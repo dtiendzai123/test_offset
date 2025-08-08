@@ -19,7 +19,7 @@ const CONFIG = {
   },
   AUTO_FIRE: {
     enabled: true,
-    minLockConfidence: 0.7
+    minLockConfidence: 0.0
   }
 };
 
@@ -257,6 +257,7 @@ function correctCrosshairOffset(crosshair, targetHead, offsetThreshold = 0.05) {
 function updateAimbot(crosshair, playerPos, enemy) {
     const headPos = enemy.headPos;
     const chestPos = enemy.chestPos;
+
     let enemyVelocity = lastEnemyHeadPos ? Vector3.distance(headPos, lastEnemyHeadPos) : 0;
     let playerVelocity = lastPlayerPos ? Vector3.distance(playerPos, lastPlayerPos) : 0;
     lastEnemyHeadPos = { ...headPos };
@@ -268,9 +269,10 @@ function updateAimbot(crosshair, playerPos, enemy) {
 
     let isRedDotActive = Vector3.distance(crosshair, headPos) < 0.15;
 
-    let predictedHead = fixBulletDrift(headPos, playerPos);
-    let corrected = correctCrosshairOffset(crosshair, predictedHead);
-    let smoothedAim = aimSmoother.smooth(corrected);
+    let aimedPos = magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isRedDotActive);
+
+    // Sử dụng smoothing cao hơn khi tâm đỏ
+    let smoothedAim = aimSmoother.smooth(aimedPos, isRedDotActive);
 
     return magneticAimChestToHead(smoothedAim, chestPos, headPos, isDynamicLock, isRedDotActive);
 }
@@ -303,7 +305,7 @@ function magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isR
 function fireIfLocked(crosshair, targetHead) {
     const dist = Vector3.distance(crosshair, targetHead);
     if (dist < HEAD_LOCK_RADIUS) {
-        aimTo(targetHead);
+        aimTo(targetHead); // snap chuẩn vào đầu
         triggerFire();
         console.log("🔒 Head Lock Fire Triggered");
     }
