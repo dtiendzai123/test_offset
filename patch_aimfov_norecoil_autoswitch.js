@@ -1,4 +1,3 @@
-
 // ==UserScript==
 // @name         Patch AIMFOV + NORECOIL + AutoSwitch Head/Chest + Full Aim Assist + TouchDrag + HeadLock
 // @namespace    http://garena.freefire/
@@ -52,13 +51,11 @@ class AimSmoother {
             this.lastPos = currentPos;
             return currentPos;
         }
-
         const smoothed = {
             x: this.lastPos.x + (currentPos.x - this.lastPos.x) * this.smoothFactor,
             y: this.lastPos.y + (currentPos.y - this.lastPos.y) * this.smoothFactor,
             z: this.lastPos.z + (currentPos.z - this.lastPos.z) * this.smoothFactor
         };
-
         this.lastPos = smoothed;
         return smoothed;
     }
@@ -82,14 +79,12 @@ function fixBulletDrift(targetPos, playerPos, bulletSpeed = 95, predictionFactor
         y: targetPos.y - playerPos.y,
         z: targetPos.z - playerPos.z
     };
-
     const distance = Vector3.distance(playerPos, targetPos);
     const travelTime = distance / bulletSpeed;
-
     return {
-        x: targetPos.x + (direction.x * predictionFactor * travelTime),
-        y: targetPos.y + (direction.y * predictionFactor * travelTime),
-        z: targetPos.z + (direction.z * predictionFactor * travelTime)
+        x: targetPos.x + direction.x * predictionFactor * travelTime,
+        y: targetPos.y + direction.y * predictionFactor * travelTime,
+        z: targetPos.z + direction.z * predictionFactor * travelTime
     };
 }
 
@@ -97,13 +92,8 @@ function correctCrosshairOffset(crosshair, targetHead, offsetThreshold = 0.05) {
     const dx = Math.abs(crosshair.x - targetHead.x);
     const dy = Math.abs(crosshair.y - targetHead.y);
     const dz = Math.abs(crosshair.z - targetHead.z);
-
     if (dx > offsetThreshold || dy > offsetThreshold || dz > offsetThreshold) {
-        return {
-            x: targetHead.x,
-            y: targetHead.y,
-            z: targetHead.z
-        };
+        return { x: targetHead.x, y: targetHead.y, z: targetHead.z };
     }
     return crosshair;
 }
@@ -111,7 +101,6 @@ function correctCrosshairOffset(crosshair, targetHead, offsetThreshold = 0.05) {
 function updateAimbot(crosshair, playerPos, enemy) {
     const headPos = enemy.headPos;
     const chestPos = enemy.chestPos;
-
     let enemyVelocity = lastEnemyHeadPos ? Vector3.distance(headPos, lastEnemyHeadPos) : 0;
     let playerVelocity = lastPlayerPos ? Vector3.distance(playerPos, lastPlayerPos) : 0;
     lastEnemyHeadPos = { ...headPos };
@@ -185,9 +174,9 @@ function cameraLookAt(x, y, z) { console.log("🎥 LookAt:", x, y, z); }
 // === PATCH JSON ===
 try {
     let json = JSON.parse(body);
-    if (json?.data) {
+    if (json && json.data) {
         json.data = json.data.map(entry => {
-            if (entry?.value?.includes("base64")) {
+            if (entry && typeof entry.value === 'string' && entry.value.includes("base64")) {
                 let b64 = entry.value.split(',')[1];
                 let patched = patchBinary(b64, AIMFOV_FIND, AIMFOV_REPLACE);
                 patched = patchBinary(patched, NORECOIL_FIND, NORECOIL_REPLACE);
@@ -213,7 +202,7 @@ try {
 
         const playerPos = { x: 0, y: 0, z: 0 };
         const crosshair = { x: 0, y: 0, z: 0 };
-        const enemyList = json.data.filter(e => e?.position).map(e => {
+        const enemyList = json.data.filter(e => e && e.position).map(e => {
             const pos = e.position;
             return {
                 pos: { x: pos.x, y: pos.y, z: pos.z },
@@ -236,47 +225,52 @@ try {
     }
 } catch (e) {
     console.log("❌ JSON Parse Error:", e);
-      const aimConfigs = [
-        json.aimSettings,
-        json.settings?.aimAssist,
-        json.gameConfig?.aimAssist,
-        json.config?.aim,
-        json.settings?.aim
-    ];
 
-    for (let config of aimConfigs) {
-        if (!config) continue;
-        config.enabled = true;
-        config.aimFOV = 999;
-        config.aimSmooth = 0;
-        config.noRecoil = true;
-        config.autoHeadshot = true;
-        config.lockBone = "head";
-        config.prediction = true;
-        config.autoFire = true;
-    }
+    // Nếu lỗi parse JSON, thử patch config chung nếu có
+    let json = null;
+    try {
+        json = JSON.parse(body);
+    } catch {}
 
-    // Patch target priority và force headshot
-    function patchTargets(obj) {
-        if (!obj || typeof obj !== 'object') return;
-        for (const key in obj) {
-            if (!obj.hasOwnProperty(key)) continue;
-            let v = obj[key];
-            if (v && typeof v === 'object') {
-                if ('priority' in v) v.priority = 9999;
-                if ('forceHeadshot' in v) v.forceHeadshot = true;
-                if ('alwaysEnable' in v) v.alwaysEnable = true;
-                patchTargets(v);
+    if (json) {
+        const aimConfigs = [
+            json.aimSettings,
+            json.settings?.aimAssist,
+            json.gameConfig?.aimAssist,
+            json.config?.aim,
+            json.settings?.aim
+        ];
+
+        for (let config of aimConfigs) {
+            if (!config) continue;
+            config.enabled = true;
+            config.aimFOV = 999;
+            config.aimSmooth = 0;
+            config.noRecoil = true;
+            config.autoHeadshot = true;
+            config.lockBone = "head";
+            config.prediction = true;
+            config.autoFire = true;
+        }
+
+        // Patch target priority và force headshot
+        function patchTargets(obj) {
+            if (!obj || typeof obj !== 'object') return;
+            for (const key in obj) {
+                if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+                let v = obj[key];
+                if (v && typeof v === 'object') {
+                    if ('priority' in v) v.priority = 9999;
+                    if ('forceHeadshot' in v) v.forceHeadshot = true;
+                    if ('alwaysEnable' in v) v.alwaysEnable = true;
+                    patchTargets(v);
+                }
             }
         }
+        patchTargets(json.targets || json.enemySettings || json.gameTargets);
+
+        body = JSON.stringify(json);
     }
-    patchTargets(json.targets || json.enemySettings || json.gameTargets);
-
-    body = JSON.stringify(json);
-} catch (e) {
-    console.log("[FF Patch] JSON parse error:", e);
-}
-
 
     $done({ body });
 }
