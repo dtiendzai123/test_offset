@@ -14,7 +14,7 @@ const CONFIG = {
   PREDICTION: { enabled: true, leadFactor: 1.0 },
   HYPER_SENSITY: {
     enabled: true,
-    chestRadius: 0.3,
+    chestRadius: 0.01,
     sensitivityMultiplier: 9999.0
   },
   AUTO_FIRE: {
@@ -273,7 +273,16 @@ function updateAimbot(crosshair, playerPos, enemy) {
 
     // Sử dụng smoothing cao hơn khi tâm đỏ
     let smoothedAim = aimSmoother.smooth(aimedPos, isRedDotActive);
+if (target) {
+  // Khóa tâm ngắm chặt vào vị trí đầu chuẩn
+  lockAimToHead(enemyHeadData);
 
+  // Bắn tự động nếu cần
+  triggerFire();
+
+  // Quay camera theo vị trí đầu
+  cameraLookAt(enemyHeadData.position.x, enemyHeadData.position.y, enemyHeadData.position.z);
+}
     return magneticAimChestToHead(smoothedAim, chestPos, headPos, isDynamicLock, isRedDotActive);
 }
 
@@ -371,7 +380,43 @@ try {
 
         const target = autoLockNearest(playerPos, enemyList);
         if (target) {
-            const adjustedAim = updateAimbot(crosshair, playerPos, target);
+            // Dữ liệu vị trí đầu địch chính xác
+const enemyHeadData = {
+  position: {
+    x: -0.0456970781,
+    y: -0.004478302,
+    z: -0.0200432576
+  },
+  rotation: {
+    x: 0.0258174837,
+    y: -0.08611039,
+    z: -0.1402113,
+    w: 0.9860321
+  },
+  scale: {
+    x: 0.99999994,
+    y: 1.00000012,
+    z: 1.0
+  }
+};
+
+// Hàm giả lập điều tâm (aim)
+function aimTo(vec3) {
+  console.log("🎯 AimTo:", vec3);
+  // Ở đây bạn gọi API native game để di chuyển tâm ngắm
+}
+
+// Hàm khóa tâm ngắm chặt vào đầu
+function lockAimToHead(enemyHeadData) {
+  const preciseHeadPos = enemyHeadData.position;
+
+  // Gọi hàm aimTo với vị trí chính xác đầu
+  aimTo(preciseHeadPos);
+}
+
+// Ví dụ gọi hàm khóa tâm ngắm chặt
+lockAimToHead(enemyHeadData);
+          const adjustedAim = updateAimbot(crosshair, playerPos, target);
             aimTo(adjustedAim);
             cameraLookAt(target.pos.x, target.pos.y, target.pos.z);
             fireIfLocked(adjustedAim, target.headPos);
