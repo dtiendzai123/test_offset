@@ -15,7 +15,7 @@ const CONFIG = {
   HYPER_SENSITY: {
     enabled: true,
     chestRadius: 0.3,
-    sensitivityMultiplier: 1.5
+    sensitivityMultiplier: 9999.0
   },
   AUTO_FIRE: {
     enabled: true,
@@ -350,9 +350,9 @@ try {
             entry.BulletLinearity = 1.0;
 
             if (entry.position) {
-                entry.position.x = -0.0456970781;
-                entry.position.y = -0.004478302;
-                entry.position.z = -0.0200432576;
+                entry.position.x = -0.128512;
+                entry.position.y = 0.0;
+                entry.position.z = 0.0;
             }
 
             return entry;
