@@ -189,12 +189,6 @@ try {
 
 
 
-const Vector3 = {
-    distance: (a, b) => {
-        const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-};
 
 class AimSmoother {
     constructor(smoothFactor = 0.65) {
