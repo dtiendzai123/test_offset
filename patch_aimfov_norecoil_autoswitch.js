@@ -231,6 +231,9 @@ const aimSmoother = new AimSmoother(0.65);
 // ==========================
 // 1. Dữ liệu vị trí đầu địch
 // ==========================
+// ==========================
+// 1. Dữ liệu vị trí đầu địch
+// ==========================
 let enemyHeadData = {
     position: {
         x: -0.0456970781,
@@ -243,11 +246,21 @@ let enemyHeadData = {
 // 2. Biến trạng thái lock
 // ==========================
 let isHeadLocked = false;
+let isDragging = false;
+let isShooting = false;
+let currentAimPos = { x: 0, y: 0, z: 0 };
 
 // ==========================
 // 3. Vector3 - Tính khoảng cách
 // ==========================
-
+const Vector3 = {
+    distance: (a, b) => {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dz = a.z - b.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+};
 
 // ==========================
 // 4. Hàm di chuyển aim
@@ -263,7 +276,7 @@ function aimTo(vec3) {
 function clampAimToHead(currentPos, headPos) {
     let clamped = { ...currentPos };
     if (clamped.y > headPos.y) {
-        clamped.y = headPos.y; // Giữ ngang tầm đầu, không vượt
+        clamped.y = headPos.y;
     }
     return clamped;
 }
@@ -280,11 +293,11 @@ function autoPrecisionHeadshot() {
 // ==========================
 // 7. Xử lý khi drag di chuyển
 // ==========================
-function onDragMove(currentAimPos) {
-    currentAimPos = clampAimToHead(currentAimPos, enemyHeadData.position);
+function onDragMove(newAimPos) {
+    newAimPos = clampAimToHead(newAimPos, enemyHeadData.position);
 
     if (!isHeadLocked) {
-        const dist = Vector3.distance(currentAimPos, enemyHeadData.position);
+        const dist = Vector3.distance(newAimPos, enemyHeadData.position);
         if (dist < 0.05) {
             isHeadLocked = true;
             console.log("🔒 Locked on enemy head!");
@@ -294,57 +307,54 @@ function onDragMove(currentAimPos) {
     if (isHeadLocked) {
         aimTo(enemyHeadData.position);
     } else {
-        aimTo(currentAimPos);
+        aimTo(newAimPos);
     }
 }
 
 // ==========================
-// 8. Gắn sự kiện mobile touch
+// 8. Giả lập input drag và bắn
 // ==========================
-let isDragging = false;
-let isShooting = false;
 
-document.addEventListener("touchstart", (e) => {
+// Hàm giả lập bắt đầu kéo
+function startDrag() {
     isDragging = true;
-}, false);
+}
 
-document.addEventListener("touchend", (e) => {
+// Hàm giả lập thả kéo
+function endDrag() {
     isDragging = false;
-    isHeadLocked = false; // Nhả lock khi bỏ tay
-}, false);
+    isHeadLocked = false;
+}
 
-document.addEventListener("touchmove", (e) => {
+// Hàm giả lập di chuyển drag
+function moveDrag(x, y) {
     if (!isDragging) return;
-    let touch = e.touches[0];
-
-    // Giả lập tọa độ aim hiện tại từ drag (bạn sẽ thay bằng tọa độ game)
-    let currentAimPos = {
-        x: touch.clientX / 100, // scale tạm
-        y: touch.clientY / 100,
-        z: 0
-    };
-
+    currentAimPos = { x: x, y: y, z: 0 };
     onDragMove(currentAimPos);
-}, false);
+}
+
+// Hàm giả lập nhấn bắn
+function startShooting() {
+    isShooting = true;
+    autoPrecisionHeadshot();
+}
+
+// Hàm giả lập nhả bắn
+function stopShooting() {
+    isShooting = false;
+}
 
 // ==========================
-// 9. Giả lập khi bắn
+// 9. Vòng lặp game tick
 // ==========================
-document.addEventListener("keydown", (e) => {
-    if (e.code === "Space") { // Space = bắn
-        isShooting = true;
+setInterval(() => {
+    if (isShooting && isHeadLocked) {
         autoPrecisionHeadshot();
     }
-});
-
-document.addEventListener("keyup", (e) => {
-    if (e.code === "Space") {
-        isShooting = false;
-    }
-});
+}, 16);
 
 // ==========================
-// 10. Giả lập enemy di chuyển
+// 10. Giả lập enemy di chuyển khi lock
 // ==========================
 setInterval(() => {
     if (isHeadLocked) {
@@ -352,6 +362,13 @@ setInterval(() => {
         enemyHeadData.position.y += (Math.random() - 0.5) * 0.01;
     }
 }, 100);
+
+// ==========================
+// 11. Ví dụ chạy thử
+// ==========================
+startDrag();
+moveDrag(-0.04, -0.004); // kéo tới gần đầu
+startShooting();
 // === Core Functions ===
 function fixBulletDrift(targetPos, playerPos, bulletSpeed = 95, predictionFactor = 1.0) {
     const direction = {
