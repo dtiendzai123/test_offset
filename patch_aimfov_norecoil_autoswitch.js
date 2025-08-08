@@ -4,28 +4,7 @@
 // @match        *api.ff.garena.com*
 // @run-at       response
 // ==/UserScript==
-const CONFIG = {
-  DEBUG: false,                 // true sẽ console.log thêm
-  DEFAULT_AIMFOV: 999,          // giá trị lớn để cover target
-  AIM_SMOOTH: 0,                // 0 = snap, >0 = smoothing coefficient
-  NO_RECOIL: true,
-  AUTO_HEADSHOT: true,
-  AUTO_SWITCH: true,            // tự switch head/chest logic
-  LOCK_BONE: "head",            // ưu tiên "head" hoặc "chest"
-  HYPER_SENSITY: {              // tăng sensitivity khi crosshair near chest
-    enabled: true,
-    chestRadius: 30,            // pixel radius vùng chest
-    sensitivityMultiplier: 3.5  // hệ số tăng sensitivity
-  },
-  AUTO_FIRE: {
-    enabled: true,
-    minLockConfidence: 0.65     // chỉ auto fire khi độ tự tin >= này (0..1)
-  },
-  PREDICTION: {
-    enabled: true,
-    leadFactor: 0.18            // nhân với velocity để dự đoán
-  }
-};
+
 let body = $response.body;
 
 // Convert hex pattern to buffer
