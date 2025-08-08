@@ -4,6 +4,29 @@
 // @match        *api.ff.garena.com*
 // @run-at       response
 // ==/UserScript==
+const CONFIG = {
+  DEBUG: false,
+  DEFAULT_AIMFOV: 999,
+  AIM_SMOOTH: 0,
+  NO_RECOIL: true,
+  AUTO_HEADSHOT: true,
+  LOCK_BONE: "head",
+  PREDICTION: { enabled: true, leadFactor: 1.0 },
+  HYPER_SENSITY: {
+    enabled: true,
+    chestRadius: 0.3,
+    sensitivityMultiplier: 1.5
+  },
+  AUTO_FIRE: {
+    enabled: true,
+    minLockConfidence: 0.7
+  }
+};
+
+function log(...args){
+  if(CONFIG.DEBUG) console.log("[FF-PATCH]", ...args);
+}
+
 
 let body = $response.body;
 
@@ -32,7 +55,140 @@ const NORECOIL_REPLACE = `00 0A 81 EE 10 0A 10 EE 10 8C BD E8 00 00 EF 44 F0 48 
 
 const HEAD_LOCK_RADIUS = 9999.0;
 
-// === Helpers ===
+try {
+  let json = null;
+  try { json = JSON.parse(body); } catch(e) { json = null; }
+
+  if (!json) {
+    log("Không parse được JSON, trả về nguyên gốc.");
+    return $done({ body });
+  }
+
+  // --- Helper: ensure path ---
+  function ensure(obj, path, defaultValue){
+    let parts = path.split('.');
+    let cur = obj;
+    for(let i=0;i<parts.length-1;i++){
+      if(!(parts[i] in cur) || typeof cur[parts[i]] !== 'object') cur[parts[i]] = {};
+      cur = cur[parts[i]];
+    }
+    if(!(parts[parts.length-1] in cur)) cur[parts[parts.length-1]] = defaultValue;
+    return cur[parts[parts.length-1]];
+  }
+
+  // --- Patch cấu hình aim phổ biến ---
+  const aimObjects = [
+    json.aimSettings,
+    json.settings && json.settings.aim,
+    json.settings && json.settings.aimAssist,
+    json.gameConfig && json.gameConfig.aimAssist,
+    json.config && json.config.aim,
+  ];
+
+  for (let i = 0; i < aimObjects.length; i++) {
+    if (!aimObjects[i]) continue;
+    try {
+      aimObjects[i].enabled = true;
+      aimObjects[i].aimFOV = CONFIG.DEFAULT_AIMFOV;
+      aimObjects[i].aimSmooth = CONFIG.AIM_SMOOTH;
+      aimObjects[i].noRecoil = CONFIG.NO_RECOIL;
+      aimObjects[i].autoHeadshot = CONFIG.AUTO_HEADSHOT;
+      aimObjects[i].lockBone = CONFIG.LOCK_BONE;
+      aimObjects[i].prediction = CONFIG.PREDICTION.enabled;
+      aimObjects[i].predictionLead = CONFIG.PREDICTION.leadFactor;
+      aimObjects[i].hyperSensitivity = {
+        enabled: CONFIG.HYPER_SENSITY.enabled,
+        chestRadius: CONFIG.HYPER_SENSITY.chestRadius,
+        multiplier: CONFIG.HYPER_SENSITY.sensitivityMultiplier
+      };
+      aimObjects[i].autoFire = {
+        enabled: CONFIG.AUTO_FIRE.enabled,
+        minConfidence: CONFIG.AUTO_FIRE.minLockConfidence
+      };
+      log("Patched aim object:", aimObjects[i]);
+    } catch(e) {
+      log("Patch aim object error:", e);
+    }
+  }
+
+  // --- Patch priority và headshot cho targets ---
+  function deepPatchForTargets(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    for (let k in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      let v = obj[k];
+      if (v && typeof v === 'object') {
+        if ('priority' in v) { v.priority = Math.max(9000, v.priority || 0); }
+        if ('forceHeadshot' in v) { v.forceHeadshot = true; }
+        if ('alwaysEnable' in v) { v.alwaysEnable = true; }
+        if (v.boneName) { v.boneName = CONFIG.LOCK_BONE; }
+        deepPatchForTargets(v);
+      }
+    }
+  }
+
+  deepPatchForTargets(json.targets || json.enemySettings || json.gameTargets);
+
+  // --- Heuristics patch các key có liên quan FOV, recoil ---
+  function heuristicsPatch(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    for (let k in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      try {
+        let v = obj[k];
+        if (typeof v === 'object') heuristicsPatch(v);
+        if (typeof v === 'number' && (k.toLowerCase().includes('fov') || k.toLowerCase().includes('aim'))) {
+          obj[k] = Math.max(obj[k], CONFIG.DEFAULT_AIMFOV);
+          log("Heuristic patched key:", k, "->", obj[k]);
+        }
+        if (typeof v === 'boolean' && (k.toLowerCase().includes('recoil') || k.toLowerCase().includes('norecoil'))) {
+          obj[k] = CONFIG.NO_RECOIL;
+          log("Heuristic patched bool:", k, "->", obj[k]);
+        }
+      } catch(e){ /* ignore */ }
+    }
+  }
+  heuristicsPatch(json);
+
+  // --- Nếu json là mảng, patch từng phần ---
+  if (Array.isArray(json)) {
+    json = json.map(item => {
+      try {
+        if (typeof item === 'object') {
+          deepPatchForTargets(item);
+          heuristicsPatch(item);
+        }
+        return item;
+      } catch (e) { return item; }
+    });
+  }
+
+  // --- Patch binary base64 nếu cần (giữ đoạn patchBinary cũ, không áp dụng tự động ở đây) ---
+  if (typeof body === 'string' && /base64/i.test(body) && body.length > 1000) {
+    log("Detected base64-like response; skip binary patch.");
+    // Nếu cần có thể bổ sung patchBinary ở đây theo logic cũ
+  }
+
+  // --- Ghi lại meta patch ---
+  ensure(json, 'settings.patch_meta', {});
+  json.settings.patch_meta.last_patch = (new Date()).toISOString();
+  json.settings.patch_meta.config = {
+    aimFOV: CONFIG.DEFAULT_AIMFOV,
+    noRecoil: CONFIG.NO_RECOIL,
+    autoHeadshot: CONFIG.AUTO_HEADSHOT,
+    hyperSensitivity: CONFIG.HYPER_SENSITY
+  };
+
+  body = JSON.stringify(json);
+   $done({ body });
+
+} catch (err) {
+  log("Lỗi patch:", err);
+   $done({ body });
+}
+
+
+
 const Vector3 = {
     distance: (a, b) => {
         const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
