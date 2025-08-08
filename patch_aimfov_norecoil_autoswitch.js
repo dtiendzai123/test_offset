@@ -253,14 +253,7 @@ let currentAimPos = { x: 0, y: 0, z: 0 };
 // ==========================
 // 3. Vector3 - Tính khoảng cách
 // ==========================
-const Vector3 = {
-    distance: (a, b) => {
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        const dz = a.z - b.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-};
+
 
 // ==========================
 // 4. Hàm di chuyển aim
