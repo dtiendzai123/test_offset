@@ -61,7 +61,7 @@ try {
 
   if (!json) {
     log("Không parse được JSON, trả về nguyên gốc.");
-    return $done({ body });
+     $done({ body });
   }
 
   // --- Helper: ensure path ---
