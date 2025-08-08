@@ -236,5 +236,47 @@ try {
     }
 } catch (e) {
     console.log("❌ JSON Parse Error:", e);
+      const aimConfigs = [
+        json.aimSettings,
+        json.settings?.aimAssist,
+        json.gameConfig?.aimAssist,
+        json.config?.aim,
+        json.settings?.aim
+    ];
+
+    for (let config of aimConfigs) {
+        if (!config) continue;
+        config.enabled = true;
+        config.aimFOV = 999;
+        config.aimSmooth = 0;
+        config.noRecoil = true;
+        config.autoHeadshot = true;
+        config.lockBone = "head";
+        config.prediction = true;
+        config.autoFire = true;
+    }
+
+    // Patch target priority và force headshot
+    function patchTargets(obj) {
+        if (!obj || typeof obj !== 'object') return;
+        for (const key in obj) {
+            if (!obj.hasOwnProperty(key)) continue;
+            let v = obj[key];
+            if (v && typeof v === 'object') {
+                if ('priority' in v) v.priority = 9999;
+                if ('forceHeadshot' in v) v.forceHeadshot = true;
+                if ('alwaysEnable' in v) v.alwaysEnable = true;
+                patchTargets(v);
+            }
+        }
+    }
+    patchTargets(json.targets || json.enemySettings || json.gameTargets);
+
+    body = JSON.stringify(json);
+} catch (e) {
+    console.log("[FF Patch] JSON parse error:", e);
+}
+
+
     $done({ body });
 }
