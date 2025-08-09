@@ -14,7 +14,7 @@ const CONFIG = {
   PREDICTION: { enabled: true, leadFactor: 1.0 },
   HYPER_SENSITY: {
     enabled: true,
-    chestRadius: 0.01,
+    chestRadius: 0.1,
     sensitivityMultiplier: 9999.0
   },
   AUTO_FIRE: {
@@ -362,6 +362,35 @@ setInterval(() => {
 startDrag();
 moveDrag(-0.04, -0.004); // kéo tới gần đầu
 startShooting();
+function lockToHead(cameraPos, headPos) {
+    let dir = headPos.subtract(cameraPos).normalize();
+    // Gửi lệnh aim tới API game (tùy hệ thống của bạn)
+    aimTo(dir);
+}
+
+// Giả lập hàm bắn
+function triggerFire() {
+    console.log("🔫 Fire Triggered");
+}
+
+// Loop chính
+function update(cameraPos, headPos, isFiring) {
+    if (CONFIG.AUTO_HEADLOCK && isFiring) {
+        lockToHead(cameraPos, headPos);
+    }
+    if (isFiring) {
+        triggerFire();
+    }
+}
+
+// Ví dụ chạy
+let cam = new Vector3(0, 0, 0);
+let head = new Vector3(-0.04089227, 0.00907892, 0.02748467);
+
+// Mô phỏng bắn liên tục
+setInterval(() => {
+    update(cam, head, true);
+}, 16); // ~60fps
 // === Core Functions ===
 function fixBulletDrift(targetPos, playerPos, bulletSpeed = 95, predictionFactor = 1.0) {
     const direction = {
@@ -424,7 +453,7 @@ function magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isR
     const distToChest = Vector3.distance(crosshair, chestPos);
     const distToHead = Vector3.distance(crosshair, headPos);
 
-    let dragForce = 0.4;
+    let dragForce = 1.0;
 
     if (isRedDotActive) {
         return { x: headPos.x, y: headPos.y, z: headPos.z };
@@ -433,8 +462,8 @@ function magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isR
     if (isDynamicLock) {
         dragForce = distToHead < 0.4 ? 0.96 : 0.85;
     } else {
-        if (distToHead < 0.3) dragForce = 0.8;
-        else if (distToChest < 1.2) dragForce = 0.65;
+        if (distToHead < 0.3) dragForce = 0.01;
+        else if (distToChest < 1.2) dragForce = 9999.0;
     }
 
     let newX = crosshair.x + (headPos.x - crosshair.x) * dragForce;
