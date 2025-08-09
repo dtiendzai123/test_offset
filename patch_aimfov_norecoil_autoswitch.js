@@ -14,7 +14,7 @@ const CONFIG = {
   PREDICTION: { enabled: true, leadFactor: 1.0 },
   HYPER_SENSITY: {
     enabled: true,
-    chestRadius: 0.1,
+    chestRadius: 0.001,
     sensitivityMultiplier: 9999.0
   },
   AUTO_FIRE: {
@@ -360,7 +360,7 @@ setInterval(() => {
 // 11. Ví dụ chạy thử
 // ==========================
 startDrag();
-moveDrag(-0.04, -0.004); // kéo tới gần đầu
+moveDrag(-0.01, 1.48); // kéo tới gần đầu
 startShooting();
 function lockToHead(cameraPos, headPos) {
     let dir = headPos.subtract(cameraPos).normalize();
