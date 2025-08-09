@@ -316,7 +316,7 @@ function startDrag() {
 // Hàm giả lập thả kéo
 function endDrag() {
     isDragging = false;
-    isHeadLocked = false;
+    isHeadLocked = true;
 }
 
 // Hàm giả lập di chuyển drag
@@ -360,7 +360,7 @@ setInterval(() => {
 // 11. Ví dụ chạy thử
 // ==========================
 startDrag();
-moveDrag(-0.01, 1.70); // kéo tới gần đầu
+moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
 startShooting();
 function lockToHead(cameraPos, headPos) {
     let dir = headPos.subtract(cameraPos).normalize();
