@@ -367,7 +367,55 @@ function lockToHead(cameraPos, headPos) {
     // Gửi lệnh aim tới API game (tùy hệ thống của bạn)
     aimTo(dir);
 }
+function selectBone(target, crosshairPos) {
+    const distToHead = distance2D(crosshairPos, target.headPos);
+    const distToChest = distance2D(crosshairPos, target.chestPos);
 
+    const now = Date.now();
+
+    // Nếu đang lock vào head và chưa hết thời gian giữ
+    if (currentLockBone === "head" && now - headLockTimer < CONFIG.lockHoldTime) {
+        if (CONFIG.DEBUG) console.log("🟢 Giữ lock ở head");
+        return "head";
+    }
+
+    // Nếu crosshair đang gần head hơn chest
+    if (distToHead <= CONFIG.headSnapRadius) {
+        currentLockBone = "head";
+        headLockTimer = now;
+        if (CONFIG.DEBUG) console.log("🎯 Lock HEAD");
+        return "head";
+    }
+
+    // Nếu cho phép auto switch và crosshair gần chest hơn
+    if (CONFIG.AUTO_SWITCH && distToChest <= CONFIG.chestSnapRadius) {
+        currentLockBone = "chest";
+        if (CONFIG.DEBUG) console.log("🎯 Lock CHEST");
+        return "chest";
+    }
+
+    // Mặc định vẫn giữ bone trước đó
+    return currentLockBone;
+}
+
+// ===== HÀM TÍNH KHOẢNG CÁCH =====
+function distance2D(a, b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.sqrt(dx*dx + dy*dy);
+}
+// Nếu đang drag vào head thì giữ nguyên, không auto-switch về chest
+if (currentLockedBone === "head" && playerIsDragging) {
+    // Giữ nguyên head lock, bỏ qua auto-switch
+    targetBone = "head";
+} else {
+    // Logic chọn bone bình thường
+    if (distanceToHead <= CONFIG.HEAD_SNAP_RADIUS) {
+        targetBone = "head";
+    } else {
+        targetBone = "chest";
+    }
+}
 // Giả lập hàm bắn
 function triggerFire() {
     console.log("🔫 Fire Triggered");
