@@ -5,7 +5,9 @@
 // @run-at       response
 // ==/UserScript==
 const CONFIG = {
-  DEBUG: false,
+  lockHoldTime: 9999,   // ms giữ lock khi đã ở đầu
+    AUTO_SWITCH: true,
+    DEBUG: true,
   DEFAULT_AIMFOV: 999,
   AIM_SMOOTH: 0,
   NO_RECOIL: true,
@@ -366,6 +368,31 @@ function lockToHead(cameraPos, headPos) {
     let dir = headPos.subtract(cameraPos).normalize();
     // Gửi lệnh aim tới API game (tùy hệ thống của bạn)
     aimTo(dir);
+}
+function applyHeadLockDragOverride(target, crosshairPos) {
+    if (!CONFIG.DRAG_HEAD_LOCK_ENABLED) return null;
+    if (!target || !target.bone_Head) return null;
+
+    const headScreenPos = worldToScreen(target.bone_Head);
+    const dx = crosshairPos.x - headScreenPos.x;
+    const dy = crosshairPos.y - headScreenPos.y;
+    const distSq = dx * dx + dy * dy;
+
+    if (distSq <= CONFIG.DRAG_HEAD_LOCK_RADIUS ** 2) {
+        // Trong phạm vi head lock drag → trả về luôn vị trí head
+        return headScreenPos;
+    }
+    return null;
+}
+
+// ====== Trong loop aim ======
+let overrideAimPos = applyHeadLockDragOverride(currentTarget, getCrosshairPosition());
+if (overrideAimPos) {
+    // Gán thẳng aim vào đầu, bỏ qua body/chest logic
+    aimToScreen(overrideAimPos.x, overrideAimPos.y);
+} else {
+    // Aim logic bình thường
+    processNormalAim(currentTarget);
 }
 function selectBone(target, crosshairPos) {
     const distToHead = distance2D(crosshairPos, target.headPos);
