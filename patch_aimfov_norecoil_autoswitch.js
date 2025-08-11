@@ -23,6 +23,177 @@ const CONFIG = {
     enabled: true,
     minLockConfidence: 0.0
   }
+version: "7.1.0-X-MAX-MAGIC",
+    sensitivity: 4.8,
+    autoHeadLock: true,
+    aimLockHead: true,
+    headLockFov: 520,
+    aimFov: 380,
+    predictiveMultiplier: 1.2,
+    superHeadLock: 7.5,
+    aimSmoothnessNear: 0.99999,
+    aimSmoothnessFar: 0.99997,
+    triggerFireChance: 0.995,
+    quantumAiming: true,
+    neuralPrediction: true,
+    adaptiveAI: true,
+    multiThreaded: true,
+    ghostMode: true,
+    perfectHumanization: true,
+    realTimeML: true,
+    contextualAwareness: true,
+    wallPenetration: true,
+    magicBullet: true,
+    magicTrick: true, // New MagicTrick feature
+    stealthMode: true,
+    behaviorCloning: true,
+    naturalJitter: { min: 0.008, max: 0.06 },
+    humanReactionTime: { min: 35, max: 100 },
+    organicMovement: true,
+    biometricMimicry: true,
+    mousePersonality: 'ultra_adaptive',
+    antiPatternDetection: true,
+    hyperOptimization: true,
+    quantumCalculations: true,
+    memoryOptimization: true,
+    realTimeAdaptation: true,
+    cacheOptimization: true,
+smoothingFrames: 5,
+  frameDelay: 5,
+  noiseLevel: 0.2,
+  recoilCancelFactor: 1.0,
+  headshotPriorityZone: { xMin: 0.45, xMax: 0.55, yMin: 0.10, yMax: 0.25 },
+  fpsLogInterval: 1000,
+  trackHistoryLimit: 50,
+  enableGhostOverlay: true,
+  enableOneShotAI: true,
+  adaptiveSensitivity: true,
+  stabilizationWindow: 7,
+    
+    wasmAcceleration: true,
+    threadPoolSize: 12,
+    maxCalculationsPerFrame: 30,
+    rapidHeadSwitch: true,
+    dynamicHeadPriority: true,
+    ultraSmoothTransition: true,
+    contextualHeadLock: true,
+
+    // MagicTrick Configuration
+    magicTrickConfig: {
+      enabled: true,
+      headAttraction: 2.0, // Strength of head attraction
+      adaptiveMagic: true, // Adjust based on game context
+      magicSwitchSpeed: 0.95, // Speed of switching to new head target
+      magicConfidence: 0.9, // Confidence threshold for magic trick activation
+      visualFeedback: true, // Enable visual feedback for magic trick
+      lockPersistence: 0.25 // Time to maintain head lock (seconds)
+    },
+
+    // Master Weapon Profiles
+    tracking: {
+      default: { 
+        speed: 5.5, pullRate: 1.35, headBias: 65.0, neckBias: 28.0, chestBias: 23.0, 
+        closeBoost: 35.0, recoilPattern: [0, 0], burstControl: 1.0, rangeMod: 1.0, 
+        recoilRecovery: 0.95, penetration: 0.65, criticalZone: 15.0, stability: 0.98, 
+        neuralWeight: 0.85 
+      },
+      mp40: { 
+        speed: 33.0, pullRate: 0.65, headBias: 67.0, neckBias: 30.0, chestBias: 25.0, 
+        closeBoost: 55.0, recoilPattern: [0, -1.5, 1.0, -0.7, 0.3], burstControl: 0.85, 
+        rangeMod: 0.95, recoilRecovery: 0.96, penetration: 0.88, criticalZone: 18.0, 
+        stability: 0.96, neuralWeight: 0.87 
+      },
+      thompson: { 
+        speed: 34.0, pullRate: 0.63, headBias: 68.0, neckBias: 31.0, chestBias: 26.0, 
+        closeBoost: 57.0, recoilPattern: [0, -1.7, 1.2, -0.8, 0.4], burstControl: 0.82, 
+        rangeMod: 0.97, recoilRecovery: 0.95, penetration: 0.9, criticalZone: 19.0, 
+        stability: 0.95, neuralWeight: 0.88 
+      },
+      ump45: { 
+        speed: 33.5, pullRate: 0.64, headBias: 67.5, neckBias: 30.5, chestBias: 25.5, 
+        closeBoost: 55.0, recoilPattern: [0, -1.6, 1.1, -0.75, 0.35], burstControl: 0.84, 
+        rangeMod: 0.96, recoilRecovery: 0.96, penetration: 0.89, criticalZone: 18.5, 
+        stability: 0.96, neuralWeight: 0.87 
+      },
+      vector: { 
+        speed: 37.0, pullRate: 0.62, headBias: 69.0, neckBias: 32.0, chestBias: 27.0, 
+        closeBoost: 58.0, recoilPattern: [0, -1.4, 0.9, -0.6, 0.3], burstControl: 0.86, 
+        rangeMod: 0.93, recoilRecovery: 0.97, penetration: 0.92, criticalZone: 20.0, 
+        stability: 0.97, neuralWeight: 0.89 
+      }
+    },
+
+    // Advanced Sensitivity Matrix
+    sensiActivity: {
+      default: 1.2,
+      mp40: 1.3,
+      thompson: 1.35,
+      ump45: 1.28,
+      vector: 1.35
+    },
+
+    // Enhanced Target Priority System
+    targetPriority: {
+      head: 230,
+      neck: 130,
+      chest: 90,
+      limbs: 60,
+      distance: 1.6,
+      health: 1.2,
+      threat: 1.5,
+      movement: 1.3,
+      cover: 0.5,
+      teamPriority: 2.0,
+      visibility: 1.7,
+      exposureTime: 1.4
+    },
+
+    // AI Learning System
+    aiLearning: {
+      enabled: true,
+      learningRate: 0.25,
+      memoryDepth: 120,
+      adaptationSpeed: 0.18,
+      patternRecognition: true,
+      behaviorAnalysis: true,
+      performanceFeedback: true,
+      maxTrainingSamples: 2500
+    },
+
+    // Quantum Physics Engine
+    quantumPhysics: {
+      enabled: true,
+      uncertaintyPrinciple: 0.0006,
+      quantumTunneling: true,
+      superposition: true,
+      entanglement: true,
+      quantumCurveFluctuation: 0.0004
+    },
+
+    // Magic Bullet Settings
+    magicBulletConfig: {
+      enabled: true,
+      curve: 3.5,
+      prediction: 1.5,
+      wallBypass: true,
+      trajectoryOptimization: true,
+      dynamicCurveAdjustment: true,
+      adaptiveTrajectory: {
+        smg: { curve: 3.0, prediction: 1.3 },
+        sniper: { curve: 4.5, prediction: 1.7 }
+      },
+      magicBurstMode: { enabled: true, burstBoost: 1.2, maxBurst: 5 }
+    },
+
+    // Trigger Bot Settings
+    triggerBot: {
+      enabled: true,
+      delay: { min: 4, max: 12 },
+      burstMode: true,
+      smartTrigger: true,
+      safeMode: true,
+      adaptiveBurst: true
+    }
 };
 
 function log(...args){
