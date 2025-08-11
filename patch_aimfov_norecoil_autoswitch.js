@@ -539,6 +539,176 @@ setInterval(() => {
 startDrag();
 moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
 startShooting();
+const NeuralPredictor = {
+    neuralPredict(target, velocity, acceleration, jerk, ping, weapon, context = {}) {
+      const t = ping / 1000.0;
+      const weaponData = config.tracking[weapon] || config.tracking.default;
+      let predicted = {
+        x: target.x + velocity.x * t * config.predictiveMultiplier,
+        y: target.y + velocity.y * t * config.predictiveMultiplier
+      };
+      if (acceleration && (Math.abs(acceleration.x) > 0.1 || Math.abs(acceleration.y) > 0.1)) {
+        const accelFactor = this.calculateAccelFactor(velocity, acceleration);
+        predicted.x += 0.5 * acceleration.x * t * t * accelFactor;
+        predicted.y += 0.5 * acceleration.y * t * t * accelFactor;
+      }
+      if (jerk && (Math.abs(jerk.x) > 0.1 || Math.abs(jerk.y) > 0.1)) {
+        const jerkWeight = this.calculateJerkWeight(acceleration, jerk);
+        predicted.x += (1/6) * jerk.x * t * t * t * jerkWeight;
+        predicted.y += (1/6) * jerk.y * t * t * t * jerkWeight;
+      }
+      if (config.neuralPrediction && gameState.neuralNetwork.weights.size > 0) {
+        const neuralAdjustment = this.neuralAdjust(predicted, velocity, weapon);
+        predicted.x += neuralAdjustment.x;
+        predicted.y += neuralAdjustment.y;
+      }
+      const quantumFactor = weaponData.speed > 30 ? 1.25 : 1.1;
+      predicted.x *= config.predictiveMultiplier * quantumFactor;
+      predicted.y *= config.predictiveMultiplier * quantumFactor;
+      if (config.contextualHeadLock && context.engagement === 'high') {
+        predicted.x *= 1.05;
+        predicted.y *= 1.05;
+      }
+      if (config.magicTrick && gameState.magicTrickState.magicConfidence > config.magicTrickConfig.magicConfidence) {
+        predicted.x *= config.magicTrickConfig.headAttraction;
+        predicted.y *= config.magicTrickConfig.headAttraction;
+      }
+      return predicted;
+    },
+    calculateAccelFactor(velocity, acceleration) {
+      const speedMagnitude = Math.hypot(velocity.x, velocity.y);
+      const accelMagnitude = Math.hypot(acceleration.x, acceleration.y);
+      const input = (speedMagnitude * 0.07) + (accelMagnitude * 0.03);
+      return QuantumMathEngine.sigmoidActivation(input - 0.3) * 1.7 + 0.3;
+    },
+    calculateJerkWeight(acceleration, jerk) {
+      const accelMag = Math.hypot(acceleration.x, acceleration.y);
+      const jerkMag = Math.hypot(jerk.x, jerk.y);
+      return jerkMag === 0 ? 0 : Math.min(1.0, accelMag / (jerkMag + 1)) * 0.9;
+    },
+    neuralAdjust(predicted, velocity, weapon) {
+      const networkKey = `${weapon}_prediction`;
+      const weights = gameState.neuralNetwork.weights.get(networkKey) || { x: 0, y: 0 };
+      const speedFactor = Math.hypot(velocity.x, velocity.y) * 0.007;
+      return {
+        x: weights.x * speedFactor * Math.sin(Date.now() * 0.0007),
+        y: weights.y * speedFactor * Math.cos(Date.now() * 0.0007)
+      };
+    },
+    aiPatternAnalysis(targetId, currentPos, velocity, context = {}) {
+      const history = gameState.targetMemory.get(targetId) || [];
+      if (history.length < 5) return currentPos;
+      const patterns = {
+        linear: this.analyzeLinearPattern(history),
+        circular: this.analyzeCircularPattern(history),
+        zigzag: this.analyzeZigzagPattern(history),
+        adaptive: this.analyzeAdaptivePattern(history, velocity)
+      };
+      const bestPattern = Object.entries(patterns).reduce((best, [type, data]) => 
+        data.confidence > best.confidence ? { type, ...data } : best, { confidence: 0 });
+      return bestPattern.confidence > 0.7 ? this.extrapolateFromPattern(currentPos, bestPattern, velocity) : currentPos;
+    },
+    analyzeLinearPattern(history) {
+      if (history.length < 3) return { confidence: 0 };
+      const movements = this.calculateMovements(history);
+      const avgDirection = this.averageDirection(movements);
+      const consistency = this.calculateConsistency(movements, avgDirection);
+      return { confidence: consistency, direction: avgDirection, type: 'linear' };
+    },
+    analyzeCircularPattern(history) {
+      if (history.length < 5) return { confidence: 0 };
+      const angles = [];
+      for (let i = 2; i < history.length; i++) {
+        const angle1 = Math.atan2(history[i-1].y - history[i-2].y, history[i-1].x - history[i-2].x);
+        const angle2 = Math.atan2(history[i].y - history[i-1].y, history[i].x - history[i-1].x);
+        angles.push(angle2 - angle1);
+      }
+      const avgAngleChange = angles.reduce((sum, a) => sum + a, 0) / angles.length;
+      const consistency = 1 - (angles.reduce((sum, a) => sum + Math.abs(a - avgAngleChange), 0) / angles.length) / Math.PI;
+      return { confidence: Math.max(0, consistency), angleChange: avgAngleChange, type: 'circular' };
+    },
+    analyzeZigzagPattern(history) {
+      if (history.length < 4) return { confidence: 0 };
+      const directions = [];
+      for (let i = 1; i < history.length; i++) {
+        directions.push({
+          x: Math.sign(history[i].x - history[i-1].x),
+          y: Math.sign(history[i].y - history[i-1].y)
+        });
+      }
+      let changes = 0;
+      for (let i = 1; i < directions.length; i++) {
+        if (directions[i].x !== directions[i-1].x || directions[i].y !== directions[i-1].y) changes++;
+      }
+      const changeRate = changes / directions.length;
+      return { confidence: changeRate > 0.3 ? changeRate : 0, changeRate, type: 'zigzag' };
+    },
+    analyzeAdaptivePattern(history, velocity) {
+      const features = this.extractFeatures(history, velocity);
+      const confidence = this.calculateAdaptiveConfidence(features);
+      return { confidence, features, type: 'adaptive' };
+    },
+    calculateMovements(history) {
+      return history.slice(1).map((pos, i) => ({
+        dx: pos.x - history[i].x,
+        dy: pos.y - history[i].y,
+        dt: pos.time - history[i].time
+      }));
+    },
+    averageDirection(movements) {
+      const sum = movements.reduce((acc, m) => ({ x: acc.x + m.dx, y: acc.y + m.dy }), { x: 0, y: 0 });
+      return { x: sum.x / movements.length, y: sum.y / movements.length };
+    },
+    calculateConsistency(movements, avgDirection) {
+      const deviationSum = movements.reduce((sum, m) => sum + Math.abs(m.dx - avgDirection.x) + Math.abs(m.dy - avgDirection.y), 0);
+      return Math.max(0, 1 - (deviationSum / movements.length) / 35);
+    },
+    extractFeatures(history, velocity) {
+      return {
+        speed: Math.hypot(velocity.x, velocity.y),
+        acceleration: this.calculateAcceleration(history),
+        directionChanges: this.countDirectionChanges(history),
+        pathLength: this.calculatePathLength(history),
+        timeSpan: history.length > 1 ? history[history.length-1].time - history[0].time : 0
+      };
+    },
+    calculateAdaptiveConfidence(features) {
+      let confidence = 0.6;
+      if (features.speed > 15) confidence += 0.3;
+      if (features.acceleration < 3) confidence += 0.2;
+      if (features.directionChanges < 2) confidence += 0.3;
+      return Math.min(1.0, confidence);
+    },
+    extrapolateFromPattern(currentPos, pattern, velocity) {
+      switch (pattern.type) {
+        case 'linear': return { x: currentPos.x + pattern.direction.x * 2.5, y: currentPos.y + pattern.direction.y * 2.5 };
+        case 'circular': {
+          const angle = Math.atan2(velocity.y, velocity.x) + pattern.angleChange;
+          const speed = Math.hypot(velocity.x, velocity.y);
+          return { x: currentPos.x + Math.cos(angle) * speed * 0.15, y: currentPos.y + Math.sin(angle) * speed * 0.15 };
+        }
+        case 'zigzag': return { x: currentPos.x + velocity.x * (1 - pattern.changeRate), y: currentPos.y + velocity.y * (1 - pattern.changeRate) };
+        default: return currentPos;
+      }
+    },
+    calculateAcceleration(history) {
+      if (history.length < 3) return 0;
+      const velocities = this.calculateMovements(history).map(m => Math.hypot(m.dx, m.dy) / (m.dt || 1));
+      return velocities.slice(1).reduce((sum, v, i) => sum + Math.abs(v - velocities[i]), 0) / (velocities.length - 1);
+    },
+    countDirectionChanges(history) {
+      let changes = 0;
+      for (let i = 2; i < history.length; i++) {
+        const dir1 = Math.sign(history[i-1].x - history[i-2].x);
+        const dir2 = Math.sign(history[i].x - history[i-1].x);
+        if (dir1 !== dir2) changes++;
+      }
+      return changes;
+    },
+    calculatePathLength(history) {
+      return history.slice(1).reduce((sum, pos, i) => sum + Math.hypot(pos.x - history[i].x, pos.y - history[i].y), 0);
+    }
+  };
 function lockToHead(cameraPos, headPos) {
     let dir = headPos.subtract(cameraPos).normalize();
     // Gửi lệnh aim tới API game (tùy hệ thống của bạn)
