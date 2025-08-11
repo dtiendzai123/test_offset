@@ -1321,30 +1321,37 @@ function patchAimObjects(json) {
 // ===========================
 // 24. MAIN EXECUTION SCRIPT
 // ===========================
-let body = $response.body;
+(function() {
+    let body = $response.body;
 
-try {
-  let json = null;
-  try { 
-    json = JSON.parse(body); 
-  } catch(e) { 
-    json = null; 
-  }
+    try {
+      let json = null;
+      try { 
+        json = JSON.parse(body); 
+      } catch(e) { 
+        json = null; 
+      }
 
-  if (!json) {
-    log("Không parse được JSON, trả về nguyên gốc.");
-    $done({ body });
-    return;
-  }
-}
-  // Patch aim configurations
-  patchAimObjects(json);
+      if (!json) {
+        log("Không parse được JSON, trả về nguyên gốc.");
+        $done({ body });
+        return; // ✅ bây giờ hợp lệ vì nằm trong function
+      }
 
-  // Patch target priorities and headshot settings
-  deepPatchForTargets(json.targets || json.enemySettings || json.gameTargets);
+      // Patch aim configurations
+      patchAimObjects(json);
 
-  // Apply heuristics patch
-  heuristicsPatch(json);
+      // Patch target priorities and headshot settings
+      deepPatchForTargets(json.targets || json.enemySettings || json.gameTargets);
+
+      // Apply heuristics patch
+      heuristicsPatch(json);
+
+    } catch (err) {
+      log("Lỗi xử lý:", err);
+      $done({ body });
+    }
+})();
 
   // Handle array responses
   if (Array.isArray(json)) {
