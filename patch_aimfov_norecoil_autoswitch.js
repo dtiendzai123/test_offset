@@ -37,7 +37,7 @@ const CONFIG = {
   superHeadLock: 9999.0,
   aimSmoothnessNear: 0.00001,
   aimSmoothnessFar: 0.00001,
-  triggerFireChance: 0.995,
+  triggerFireChance: 1.0,
   quantumAiming: true,
   neuralPrediction: true,
   adaptiveAI: true,
@@ -51,8 +51,8 @@ const CONFIG = {
   magicTrick: true, // New MagicTrick feature
   stealthMode: true,
   behaviorCloning: true,
-  naturalJitter: { min: 0.008, max: 0.06 },
-  humanReactionTime: { min: 35, max: 100 },
+  naturalJitter: { min: 0.0, max: 0.0 },
+  humanReactionTime: { min: 0, max: 0 },
   organicMovement: true,
   biometricMimicry: true,
   mousePersonality: 'ultra_adaptive',
@@ -67,7 +67,6 @@ const CONFIG = {
   frameDelay: 5,
   noiseLevel: 0.2,
   recoilCancelFactor: 1.0,
-  headshotPriorityZone: { xMin: 0.45, xMax: 0.55, yMin: 0.10, yMax: 0.25 },
   fpsLogInterval: 1000,
   trackHistoryLimit: 50,
   enableGhostOverlay: true,
@@ -91,7 +90,7 @@ const CONFIG = {
     magicSwitchSpeed: 0.0001, // Speed of switching to new head target
     magicConfidence: 0.0, // Confidence threshold for magic trick activation
     visualFeedback: true, // Enable visual feedback for magic trick
-    lockPersistence: 0.000001 // Time to maintain head lock (seconds)
+    lockPersistence: 9999.0 // Time to maintain head lock (seconds)
   },
 
   // Master Weapon Profiles
@@ -193,7 +192,7 @@ const CONFIG = {
   // Trigger Bot Settings
   triggerBot: {
     enabled: true,
-    delay: { min: 4, max: 12 },
+    delay: { min: 0, max: 0 },
     burstMode: true,
     smartTrigger: true,
     safeMode: true,
@@ -422,7 +421,7 @@ let enemyHeadData = {
 // ==========================
 // 2. Biến trạng thái lock
 // ==========================
-let isHeadLocked = false;
+let isHeadLocked = true;
 let isDragging = false;
 let isShooting = false;
 let currentAimPos = { x: 0, y: 0, z: 0 };
@@ -537,8 +536,71 @@ setInterval(() => {
 // 11. Ví dụ chạy thử
 // ==========================
 startDrag();
-moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
+moveDrag(-0.0456970781, 1.68); // kéo tới gần đầu
 startShooting();
+// Hàm chuyển quaternion thành vector hướng
+function quaternionToVectors(q) {
+    // forward vector
+    let forward = {
+        x: 2 * (q.x * q.z + q.w * q.y),
+        y: 2 * (q.y * q.z - q.w * q.x),
+        z: 1 - 2 * (q.x * q.x + q.y * q.y)
+    };
+    // up vector
+    let up = {
+        x: 2 * (q.x * q.y - q.w * q.z),
+        y: 1 - 2 * (q.x * q.x + q.z * q.z),
+        z: 2 * (q.y * q.z + q.w * q.x)
+    };
+    // right vector
+    let right = {
+        x: 1 - 2 * (q.y * q.y + q.z * q.z),
+        y: 2 * (q.x * q.y + q.w * q.z),
+        z: 2 * (q.x * q.z - q.w * q.y)
+    };
+    return { forward, up, right };
+}
+
+// Giả lập hàm worldToScreen
+function worldToScreen(pos) {
+    // Ở đây bạn sẽ dùng API/game engine để convert 3D -> 2D
+    // Mình để ví dụ giả lập
+    return { x: pos.x * 100, y: pos.y * 100 };
+}
+
+// Cập nhật vùng headshot theo rotation
+function updateHeadshotZone(boneHead) {
+    let q = boneHead.rotation;
+    let { up, right } = quaternionToVectors(q);
+
+    // Tâm đầu ở screen space
+    let headCenter = worldToScreen(boneHead.position);
+
+    // Kích thước vùng headshot (theo tỉ lệ màn hình)
+    let halfWidth = 0.05;  // 5% màn hình
+    let halfHeight = 0.075; // 7.5% màn hình
+
+    // Điều chỉnh vùng theo hướng đầu
+    headshotPriorityZone.xMin = headCenter.x - halfWidth;
+    headshotPriorityZone.xMax = headCenter.x + halfWidth;
+    headshotPriorityZone.yMin = headCenter.y - halfHeight;
+    headshotPriorityZone.yMax = headCenter.y + halfHeight;
+}
+
+// Ví dụ sử dụng
+let boneHead = {
+    position: { x: -0.128512, y: 0.0, z: 0.0 },
+    rotation: {
+        x: 0.0258174837,
+        y: -0.08611039,
+        z: -0.1402113,
+        w: 0.9860321
+    }
+};
+
+updateHeadshotZone(boneHead);
+console.log("Vùng headshot mới:", headshotPriorityZone);
+
 function enhancedBlendTargets(head, neck, chest, weapon) {
     const track = config.tracking[weapon] || config.tracking.default;
     if (config.aimLockHead && config.dynamicHeadPriority && config.magicTrick) {
