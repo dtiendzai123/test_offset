@@ -27,16 +27,16 @@ const CONFIG = {
     minLockConfidence: 0.0
   },
 
-  version: "7.1.0-X-MAX-MAGIC",
-  sensitivity: 4.8,
+  
+  sensitivity: 9999.0,
   autoHeadLock: true,
   aimLockHead: true,
   headLockFov: 520,
   aimFov: 380,
-  predictiveMultiplier: 1.2,
-  superHeadLock: 7.5,
-  aimSmoothnessNear: 0.99999,
-  aimSmoothnessFar: 0.99997,
+  predictiveMultiplier: 0.1,
+  superHeadLock: 9999.0,
+  aimSmoothnessNear: 0.00001,
+  aimSmoothnessFar: 0,00001,
   triggerFireChance: 0.995,
   quantumAiming: true,
   neuralPrediction: true,
@@ -86,12 +86,12 @@ const CONFIG = {
   // MagicTrick Configuration
   magicTrickConfig: {
     enabled: true,
-    headAttraction: 2.0, // Strength of head attraction
+    headAttraction: 9999.0, // Strength of head attraction
     adaptiveMagic: true, // Adjust based on game context
-    magicSwitchSpeed: 0.95, // Speed of switching to new head target
-    magicConfidence: 0.9, // Confidence threshold for magic trick activation
+    magicSwitchSpeed: 0.0001, // Speed of switching to new head target
+    magicConfidence: 0.0, // Confidence threshold for magic trick activation
     visualFeedback: true, // Enable visual feedback for magic trick
-    lockPersistence: 0.25 // Time to maintain head lock (seconds)
+    lockPersistence: 0.000001 // Time to maintain head lock (seconds)
   },
 
   // Master Weapon Profiles
