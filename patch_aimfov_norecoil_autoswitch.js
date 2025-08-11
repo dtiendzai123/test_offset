@@ -1336,7 +1336,7 @@ try {
     $done({ body });
     return;
   }
-
+}
   // Patch aim configurations
   patchAimObjects(json);
 
