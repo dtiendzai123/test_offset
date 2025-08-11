@@ -539,6 +539,328 @@ setInterval(() => {
 startDrag();
 moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
 startShooting();
+function enhancedBlendTargets(head, neck, chest, weapon) {
+    const track = config.tracking[weapon] || config.tracking.default;
+    if (config.aimLockHead && config.dynamicHeadPriority && config.magicTrick) {
+      return head;
+    }
+    const headWeight = track.headBias / (track.headBias + track.neckBias + track.chestBias);
+    const neckWeight = track.neckBias / (track.headBias + track.neckBias + track.chestBias);
+    const chestWeight = track.chestBias / (track.headBias + track.neckBias + track.chestBias);
+    return {
+      x: head.x * headWeight + neck.x * neckWeight + chest.x * chestWeight,
+      y: head.y * headWeight + neck.y * neckWeight + chest.y * chestWeight
+    };
+  }
+
+  // Advanced Recoil Compensation
+  function advancedRecoilCompensation(weapon, shotCount, deltaTime) {
+    if (!config.tracking[weapon]?.recoilPattern) return { x: 0, y: 0 };
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    const pattern = weaponData.recoilPattern;
+    const patternIndex = Math.min(shotCount, pattern.length - 1);
+    const nextIndex = Math.min(shotCount + 1, pattern.length - 1);
+    const t = Math.min(shotCount % 1, 1);
+    const currentRecoil = QuantumMathEngine.neuralLerp(pattern[patternIndex] || 0, pattern[nextIndex] || 0, t);
+    const intensity = Math.min(shotCount * 0.1, 1.0) * (2 - weaponData.stability);
+    const stabilityBonus = weaponData.stability * 0.65;
+    const magicFactor = config.magicTrick ? 1 - config.magicTrickConfig.headAttraction * 0.05 : 1;
+    return { x: currentRecoil * intensity * (1 - stabilityBonus) * magicFactor, y: currentRecoil * intensity * (1 - stabilityBonus) * magicFactor };
+  }
+
+  // Magic Bullet and Magic Trick System
+  function magicBulletAdjustment(current, target, weapon, distance) {
+    if (!config.magicBullet || !config.magicBulletConfig.enabled) return { x: 0, y: 0 };
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    let curve = config.magicBulletConfig.curve;
+    let prediction = config.magicBulletConfig.prediction;
+
+    // Adaptive trajectory based on weapon type
+    if (config.magicBulletConfig.adaptiveTrajectory) {
+      if (weaponData.speed > 35) { // SMG
+        curve *= 0.9;
+        prediction *= 0.95;
+      } else if (weaponData.speed < 25) { // Sniper
+        curve *= 1.2;
+        prediction *= 1.1;
+      }
+    }
+
+    // Dynamic curve adjustment based on distance
+    if (config.magicBulletConfig.dynamicCurveAdjustment) {
+      curve *= (distance < 70 ? 1.5 : distance > 400 ? 0.5 : 1.0);
+    }
+
+    // Burst mode boost
+    if (config.magicBulletConfig.magicBurstMode?.enabled && gameState.recoilState.shotCount > 0) {
+      curve *= 1 + (gameState.recoilState.shotCount / config.magicBulletConfig.magicBurstMode.maxBurst) * config.magicBulletConfig.magicBurstMode.burstBoost;
+    }
+
+    // Magic Trick enhancement
+    let magicTrickBoost = 1;
+    if (config.magicTrick && config.magicTrickConfig.enabled && gameState.magicTrickState.magicConfidence > config.magicTrickConfig.magicConfidence) {
+      magicTrickBoost = config.magicTrickConfig.headAttraction;
+      curve *= magicTrickBoost;
+      prediction *= magicTrickBoost;
+      gameState.magicTrickState.lastHeadLock = Date.now();
+    }
+
+    // Quantum fluctuation
+    const quantumFluctuation = config.quantumPhysics.enabled ? (Math.random() - 0.5) * config.quantumPhysics.quantumCurveFluctuation : 0;
+
+    const angle = Math.atan2(target.y - current.y, target.x - current.x);
+    const curveIntensity = Math.min(distance / 100, 1) * curve;
+    return {
+      x: Math.cos(angle + Math.PI/2) * curveIntensity * weaponData.penetration * magicTrickBoost + quantumFluctuation,
+      y: Math.sin(angle + Math.PI/2) * curveIntensity * weaponData.penetration * magicTrickBoost + quantumFluctuation
+    };
+  }
+
+  // Rapid Head Switch System with Magic Trick
+  function rapidHeadSwitch(targets, currentTarget, currentPos, weapon) {
+    if (!config.rapidHeadSwitch || targets.length <= 1) return currentTarget;
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    let bestHead = null;
+    let bestScore = -1;
+    const now = Date.now();
+    targets.forEach(target => {
+      if (target.bodyPart !== 'head') return;
+      const distance = QuantumMathEngine.quantumDistance(currentPos, target.position);
+      let score = config.targetPriority.head * (2500 / (distance + 1)) * config.targetPriority.distance;
+      if (distance < weaponData.criticalZone) score += 50;
+      if (target.visibility) score += target.visibility * config.targetPriority.visibility;
+      if (target.exposureTime) score += target.exposureTime * config.targetPriority.exposureTime;
+      if (config.magicTrick && now - gameState.magicTrickState.lastHeadLock < config.magicTrickConfig.lockPersistence * 1000) {
+        score *= config.magicTrickConfig.magicSwitchSpeed;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestHead = target;
+      }
+    });
+    if (bestHead && config.magicTrick) {
+      gameState.magicTrickState.activeTarget = bestHead;
+      gameState.magicTrickState.magicConfidence = bestScore / (2500 * config.targetPriority.distance);
+    }
+    return bestHead || currentTarget;
+  }
+
+  // Ultimate Target Selection
+  function ultimateTargetSelection(targets, currentPos, weapon) {
+    if (!config.multiThreaded || targets.length <= 1) return targets[0];
+    let bestTarget = null;
+    let bestScore = -1;
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    targets.forEach(target => {
+      let score = 0;
+      const distance = QuantumMathEngine.quantumDistance(currentPos, target.position);
+      const criticalZone = weaponData.criticalZone || 15;
+      score += (3000 / (distance + 1)) * config.targetPriority.distance;
+      if (target.bodyPart === 'head') {
+        score += config.targetPriority.head;
+        if (distance < criticalZone) score += 50;
+      } else if (target.bodyPart === 'neck') {
+        score += config.targetPriority.neck;
+        if (distance < criticalZone) score += 40;
+      } else if (target.bodyPart === 'chest') {
+        score += config.targetPriority.chest;
+      } else {
+        score += config.targetPriority.limbs;
+      }
+      if (target.health) score += (100 - target.health) * config.targetPriority.health;
+      if (target.threatLevel) score += target.threatLevel * config.targetPriority.threat;
+      if (target.movementSpeed) score += target.movementSpeed * config.targetPriority.movement;
+      if (target.armor) score -= target.armor * config.targetPriority.cover;
+      if (target.visibility) score += target.visibility * config.targetPriority.visibility;
+      if (target.exposureTime) score += target.exposureTime * config.targetPriority.exposureTime;
+      if (weaponData.penetration && target.armor) score *= (1 - target.armor * (1 - weaponData.penetration));
+      if (config.magicTrick && target.bodyPart === 'head') {
+        score *= config.magicTrickConfig.headAttraction;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestTarget = target;
+      }
+    });
+    return config.rapidHeadSwitch ? rapidHeadSwitch(targets, bestTarget, currentPos, weapon) : bestTarget;
+  }
+
+  // Dynamic Sensitivity System
+  function calculateUltimateSensitivity(weapon, distance, targetSpeed, shotCount) {
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    let baseSensi = config.sensiActivity[weapon] || config.sensiActivity.default;
+    const distanceMultiplier = distance > 450 ? 0.6 : distance > 250 ? 0.75 : distance < 25 ? 1.5 : 1.0;
+    const speedMultiplier = targetSpeed > 22 ? 1.35 : targetSpeed > 15 ? 1.25 : targetSpeed < 0.8 ? 0.7 : 1.0;
+    const recoilMultiplier = shotCount > 8 ? 0.82 : 1.0;
+    const stabilityBonus = weaponData.stability * 0.2;
+    const magicFactor = config.magicTrick ? 1 + config.magicTrickConfig.headAttraction * 0.05 : 1;
+    return baseSensi * distanceMultiplier * speedMultiplier * recoilMultiplier * (1 + stabilityBonus) * magicFactor;
+  }
+
+  // Ultimate Aim Adjustment
+  function ultimateAdjustAim(current, head, neck, chest, weapon = 'default', options = {}) {
+    const { velocity = { x: 0, y: 0 }, acceleration = { x: 0, y: 0 }, jerk = { x: 0, y: 0 }, pingMs = 15, targetSpeed = 0, deltaTime = 16.67, targets = [], context = {} } = options;
+    if (config.hyperOptimization && gameState.performanceProfile.fps < 20) return gameState.lastAim;
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    const selectedTarget = config.rapidHeadSwitch ? rapidHeadSwitch(targets, head, current, weapon) : head;
+    const blendedTarget = enhancedBlendTargets(selectedTarget, neck, chest, weapon);
+    const predicted = NeuralPredictor.neuralPredict(blendedTarget, velocity, acceleration, jerk, pingMs, weapon, context);
+    const distance = QuantumMathEngine.quantumDistance(current, predicted);
+    if (!config.autoHeadLock || distance > config.headLockFov) return gameState.lastAim;
+    const vector = QuantumMathEngine.quantumVector(current, predicted, config.magicTrick);
+    let dx = vector.x * weaponData.speed * weaponData.pullRate * 0.09;
+    let dy = vector.y * weaponData.speed * weaponData.pullRate * 0.09;
+    const recoilComp = advancedRecoilCompensation(weapon, gameState.recoilState.shotCount, deltaTime);
+    dx += recoilComp.x;
+    dy += recoilComp.y;
+    const magicAdj = magicBulletAdjustment(current, predicted, weapon, distance);
+    dx += magicAdj.x;
+    dy += magicAdj.y;
+    const baseSmoothness = distance > 120 ? config.aimSmoothnessFar : config.aimSmoothnessNear;
+    const weaponSmoothness = baseSmoothness * weaponData.stability;
+    const smoothnessFactor = config.ultraSmoothTransition ? QuantumMathEngine.neuralLerp(0, 1, weaponSmoothness, 'smoother') : weaponSmoothness;
+    if (distance < weaponData.closeBoost) {
+      const boostFactor = (weaponData.closeBoost - distance) / weaponData.closeBoost;
+      dx *= (1 + boostFactor * 0.45);
+      dy *= (1 + boostFactor * 0.45);
+    }
+    const smoothed = {
+      x: current.x + dx * smoothnessFactor,
+      y: current.y + dy * smoothnessFactor
+    };
+    const humanized = PerfectHumanization.generateOrganicMovement(current, smoothed, smoothnessFactor, gameState.humanizationProfile.personality);
+    if (config.wasmAcceleration && wasmModule) {
+      const optimized = wasmModule.optimizeTrajectory(humanized.x, humanized.y, distance);
+      gameState.lastAim = { x: optimized.x, y: optimized.y };
+    } else {
+      gameState.lastAim = humanized;
+    }
+    if (config.magicTrickConfig.visualFeedback) {
+      gameState.performanceProfile.magicTrickConfidence = gameState.magicTrickState.magicConfidence;
+    }
+    return gameState.lastAim;
+  }
+
+  // Ultimate Aim Function
+  function ultimateAim(current, head, neck, chest, weapon = 'default', options = {}) {
+    const startTime = performance.now();
+    const aimed = ultimateAdjustAim(current, head, neck, chest, weapon, options);
+    const distance = QuantumMathEngine.quantumDistance(current, head);
+    const dynamicSensi = calculateUltimateSensitivity(weapon, distance, options.targetSpeed || 0, gameState.recoilState.shotCount);
+    const sensitivityMultiplier = config.sensitivity * dynamicSensi;
+    const confidence = calculateAimConfidence(current, head, weapon, distance);
+    const stability = (config.tracking[weapon] || config.tracking.default).stability;
+    const calcTime = performance.now() - startTime;
+    updatePerformanceMetrics(options.fps || 60, calcTime);
+    return {
+      x: aimed.x * sensitivityMultiplier,
+      y: aimed.y * sensitivityMultiplier,
+      confidence,
+      stability,
+      distance,
+      weapon,
+      magicTrickConfidence: config.magicTrickConfig.visualFeedback ? gameState.performanceProfile.magicTrickConfidence : undefined
+    };
+  }
+
+  // Enhanced Trigger Bot
+  function ultimateTriggerBot(targetDistance, weapon, targetHealth = 100) {
+    if (!config.triggerBot.enabled) return false;
+    const now = Date.now();
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    if (config.triggerBot.safeMode && gameState.performanceProfile.fps < 25) return false;
+    if (config.triggerBot.smartTrigger) {
+      const isInRange = targetDistance < config.aimFov;
+      const isInCriticalZone = targetDistance < weaponData.criticalZone;
+      const canPenetrate = weaponData.penetration > 0.7;
+      if (!isInRange && !canPenetrate) return false;
+      if (isInCriticalZone && targetHealth < 15) return true;
+    }
+    if (config.triggerBot.burstMode && gameState.triggerState?.burstCount > 0) {
+      gameState.triggerState.burstCount--;
+      return true;
+    }
+    if (now - (gameState.triggerState?.lastTrigger || 0) < config.triggerBot.delay.min) return false;
+    const shouldFire = Math.random() < config.triggerFireChance && targetDistance < config.aimFov;
+    if (shouldFire) {
+      gameState.triggerState = { lastTrigger: now, burstCount: config.triggerBot.adaptiveBurst ? Math.floor(Math.random() * (targetHealth > 50 ? 3 : 6)) + 1 : 0 };
+    }
+    if (config.magicTrick && shouldFire && gameState.magicTrickState.magicConfidence > config.magicTrickConfig.magicConfidence) {
+      gameState.magicTrickState.lastHeadLock = now;
+    }
+    return shouldFire;
+  }
+
+  // Aim Confidence Calculator
+  function calculateAimConfidence(current, target, weapon, distance) {
+    const weaponData = config.tracking[weapon] || config.tracking.default;
+    let confidence = weaponData.stability;
+    if (distance > 550) confidence -= 0.55;
+    else if (distance > 350) confidence -= 0.35;
+    else if (distance < weaponData.criticalZone) confidence += 0.35;
+    if (weaponData.speed > 35) confidence += 0.2;
+    if (weaponData.headBias > 60) confidence += 0.25;
+    if (weaponData.penetration > 0.9) confidence += 0.2;
+    if (gameState.performanceProfile.fps < 25) confidence -= 0.45;
+    else if (gameState.performanceProfile.fps > 85) confidence += 0.25;
+    if (config.neuralPrediction && gameState.neuralNetwork.weights.size > 1200) confidence += 0.2;
+    if (config.magicTrick && gameState.magicTrickState.magicConfidence > config.magicTrickConfig.magicConfidence) {
+      confidence += config.magicTrickConfig.headAttraction * 0.1;
+    }
+    gameState.magicTrickState.magicConfidence = confidence;
+    return Math.min(1.0, Math.max(0.1, confidence));
+  }
+
+  // Performance Monitoring
+  function updatePerformanceMetrics(fps, calcTime) {
+    gameState.performanceProfile.fps = fps;
+    gameState.performanceProfile.latency = gameState.performanceProfile.latency * 0.9 + calcTime * 0.1;
+    if (config.memoryOptimization) {
+      if (gameState.targetMemory.size > config.aiLearning.memoryDepth) {
+        const oldestKey = gameState.targetMemory.keys().next().value;
+        gameState.targetMemory.delete(oldestKey);
+      }
+      if (gameState.aiMemory.size > config.aiLearning.memoryDepth) {
+        const oldestKey = gameState.aiMemory.keys().next().value;
+        gameState.aiMemory.delete(oldestKey);
+      }
+      if (gameState.neuralNetwork.activations.length > config.aiLearning.maxTrainingSamples) {
+        gameState.neuralNetwork.activations.shift();
+      }
+    }
+  }
+
+  // Neural Training
+  function trainNeuralNet(sample) {
+    if (!config.aiLearning.enabled) return;
+    gameState.neuralNetwork.activations.push(sample);
+    if (gameState.neuralNetwork.activations.length > config.aiLearning.maxTrainingSamples) {
+      gameState.neuralNetwork.activations.shift();
+    }
+    const networkKey = `${sample.weapon}_prediction`;
+    const weights = gameState.neuralNetwork.weights.get(networkKey) || { x: Math.random(), y: Math.random() };
+    weights.x += config.aiLearning.learningRate * (Math.random() - 0.5) * 0.07;
+    weights.y += config.aiLearning.learningRate * (Math.random() - 0.5) * 0.07;
+    gameState.neuralNetwork.weights.set(networkKey, weights);
+    if (config.magicTrick && sample.target?.bodyPart === 'head') {
+      gameState.magicTrickState.magicConfidence += 0.05;
+    }
+  }
+
+  // Shot Management
+  function onShot(weapon, target) {
+    gameState.recoilState.shotCount++;
+    gameState.recoilState.lastShot = Date.now();
+    gameState.recoilState.weapon = weapon;
+    if (config.aiLearning.enabled && target) {
+      trainNeuralNet({ weapon, target, timestamp: Date.now() });
+    }
+    setTimeout(() => {
+      if (Date.now() - gameState.recoilState.lastShot > 1200) {
+        gameState.recoilState.shotCount = 0;
+      }
+    }, 1200);
+  }
 const NeuralPredictor = {
     neuralPredict(target, velocity, acceleration, jerk, ping, weapon, context = {}) {
       const t = ping / 1000.0;
