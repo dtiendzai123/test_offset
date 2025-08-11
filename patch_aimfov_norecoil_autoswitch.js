@@ -21,9 +21,8 @@ const CONFIG = {
   },
   AUTO_FIRE: {
     enabled: true,
-    minLockConfidence: 0.0
-  }
-version: "7.1.0-X-MAX-MAGIC",
+    minLockConfidence: 0.0,
+  version: "7.1.0-X-MAX-MAGIC",
     sensitivity: 4.8,
     autoHeadLock: true,
     aimLockHead: true,
