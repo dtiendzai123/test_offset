@@ -229,7 +229,7 @@ if (typeof document !== 'undefined') {
     document.addEventListener("touchend", () => isTouchDragging = false);
 }
 
-const aimSmoother = new AimSmoother(0.65);
+const aimSmoother = new AimSmoother(0.2);
 // ==========================
 // 1. Dữ liệu vị trí đầu địch
 // ==========================
@@ -443,6 +443,45 @@ if (currentLockedBone === "head" && playerIsDragging) {
         targetBone = "chest";
     }
 }
+// === ƯU TIÊN HEAD ===
+function getPreferredTargetBone(target) {
+    // target.bones.head, chest, neck đã có từ tracker
+    if (target?.bones?.head && target.bones.head.visible) {
+        return target.bones.head; // Ưu tiên head
+    }
+    if (target?.bones?.neck && target.bones.neck.visible) {
+        return target.bones.neck;
+    }
+    if (target?.bones?.chest && target.bones.chest.visible) {
+        return target.bones.chest;
+    }
+    return null;
+}
+
+// === DRAG LOCK NGAY LẬP TỨC VÀO HEAD ===
+function dragLockToHead(target) {
+    const bone = getPreferredTargetBone(target);
+    if (!bone) return;
+
+    // Đưa tâm ngắm ngay lập tức vào head position
+    cameraLookAt(bone.position.x, bone.position.y, bone.position.z);
+
+    // Nếu có auto fire khi head lock
+    if (CONFIG.AUTO_FIRE && bone.name === "head") {
+        triggerFire();
+    }
+}
+
+// === VÒNG LẶP GAME ===
+function gameLoop() {
+    const target = TargetManager.getNearestEnemy();
+    if (target) {
+        dragLockToHead(target);
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
 // Giả lập hàm bắn
 function triggerFire() {
     console.log("🔫 Fire Triggered");
