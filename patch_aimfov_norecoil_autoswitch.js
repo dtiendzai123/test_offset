@@ -36,7 +36,7 @@ const CONFIG = {
   predictiveMultiplier: 0.1,
   superHeadLock: 9999.0,
   aimSmoothnessNear: 0.00001,
-  aimSmoothnessFar: 0,00001,
+  aimSmoothnessFar: 0.00001,
   triggerFireChance: 0.995,
   quantumAiming: true,
   neuralPrediction: true,
