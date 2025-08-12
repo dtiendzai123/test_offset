@@ -3,33 +3,7 @@
 // @namespace    http://garena.freefire/
 // @match        *api.ff.garena.com*
 // @run-at       response
-let body = "";
-let json = null;
-
-// Ưu tiên lấy body từ request nếu có
-if (typeof $request !== 'undefined' && $request.body) {
-    body = $request.body;
-} 
-// Nếu không có request body thì thử lấy response body
-else if (typeof $response !== 'undefined' && $response.body) {
-    body = $response.body;
-}
-
-// Nếu body là object -> stringify
-if (typeof body === 'object') {
-    try { body = JSON.stringify(body); } catch (e) { body = ""; }
-}
-
-// Thử parse JSON
-try {
-    json = JSON.parse(body);
-} catch (e) {
-    json = null; // Nếu không phải JSON thì để null, các patch phía dưới sẽ xử lý raw body
-}
-
-
 // ==/UserScript==
-
 const CONFIG = {
   lockHoldTime: 9999,   // ms giữ lock khi đã ở đầu
   AUTO_SWITCH: true,
@@ -230,6 +204,30 @@ function log(...args){
 }
 
 
+// === INIT BODY HANDLER ===
+let body = "";
+let json = null;
+
+// Ưu tiên lấy body từ request nếu có
+if (typeof $request !== 'undefined' && $request.body) {
+    body = $request.body;
+} 
+// Nếu không có request body thì thử lấy response body
+else if (typeof $response !== 'undefined' && $response.body) {
+    body = $response.body;
+}
+
+// Nếu body là object -> stringify
+if (typeof body === 'object') {
+    try { body = JSON.stringify(body); } catch (e) { body = ""; }
+}
+
+// Thử parse JSON
+try {
+    json = JSON.parse(body);
+} catch (e) {
+    json = null; // Nếu không phải JSON thì để null, các patch phía dưới sẽ xử lý raw body
+}
 
 
 // Convert hex pattern to buffer
