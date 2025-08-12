@@ -4,6 +4,46 @@
 // @match        *api.ff.garena.com*
 // @run-at       response
 // ==/UserScript==
+
+// === CUSTOM FF CONFIG SETTINGS ===
+const useJailbreakMode = true;
+const ffConfigType = "plist";
+const ffConfigPath = "/var/mobile/Containers/Data/Application/Dán uuid ở đây/Documents/config.plist";
+
+
+
+// === STUB: FF Config Load/Save for Shadowrocket ===
+function loadFFConfig() {
+    if (!useJailbreakMode) {
+        console.log("[FF-CONFIG] Jailbreak mode disabled, skip load.");
+        return null;
+    }
+    console.log(`[FF-CONFIG] (Stub) Would load ${ffConfigPath} of type ${ffConfigType}`);
+    // Giả lập dữ liệu plist
+    return {
+        aimSettings: { enabled: true, aimFOV: CONFIG.DEFAULT_AIMFOV },
+        noRecoil: CONFIG.NO_RECOIL
+    };
+}
+
+function saveFFConfig(data) {
+    if (!useJailbreakMode) {
+        console.log("[FF-CONFIG] Jailbreak mode disabled, skip save.");
+        return;
+    }
+    console.log(`[FF-CONFIG] (Stub) Would save config to ${ffConfigPath}:`, JSON.stringify(data));
+}
+
+function patchFFConfig(data) {
+    if (!data) return null;
+    console.log("[FF-CONFIG] (Stub) Applying patch to config data...");
+    if (!data.aimSettings) data.aimSettings = {};
+    data.aimSettings.enabled = true;
+    data.aimSettings.aimFOV = CONFIG.DEFAULT_AIMFOV;
+    data.aimSettings.noRecoil = CONFIG.NO_RECOIL;
+    return data;
+}
+
 const CONFIG = {
   lockHoldTime: 9999,   // ms giữ lock khi đã ở đầu
   AUTO_SWITCH: true,
