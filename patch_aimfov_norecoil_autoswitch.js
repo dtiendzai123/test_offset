@@ -3,8 +3,6 @@
 // @namespace    http://garena.freefire/
 // @match        *api.ff.garena.com*
 // @run-at       response
-// ==/UserScript==
-// === INIT BODY HANDLER ===
 let body = "";
 let json = null;
 
@@ -28,6 +26,10 @@ try {
 } catch (e) {
     json = null; // Nếu không phải JSON thì để null, các patch phía dưới sẽ xử lý raw body
 }
+
+
+// ==/UserScript==
+
 const CONFIG = {
   lockHoldTime: 9999,   // ms giữ lock khi đã ở đầu
   AUTO_SWITCH: true,
@@ -441,27 +443,128 @@ let enemyHeadData = {
         z: -0.0200432576
     }
 };
-let boneHead = {
-    position: { x: -0.0456970781, y: -0.004478302, z: -0.0200432576 },
-    rotation: {
-        x: 0.0258174837,
-        y: -0.08611039,
-        z: -0.1402113,
-        w: 0.9860321
-    }
-};
+
 // ==========================
 // 2. Biến trạng thái lock
 // ==========================
 let isHeadLocked = true;
 let isDragging = false;
 let isShooting = false;
-let currentAimPos = { x: -0.128512, y: 0.0, z: 0.0 };
-let cam = new Vector3(0, 0, 0);
-let head = new Vector3(-0.04089227, 0.00907892, 0.02748467);
+let currentAimPos = { x: 0, y: 0, z: 0 };
+
 // ==========================
 // 3. Vector3 - Tính khoảng cách
 // ==========================
+
+
+// ==========================
+// 4. Hàm di chuyển aim
+// ==========================
+function aimTo(vec3) {
+    console.log(`🎯 AimTo -> X=${vec3.x.toFixed(3)}, Y=${vec3.y.toFixed(3)}, Z=${vec3.z.toFixed(3)}`);
+    // TODO: Hook API game để di chuyển tâm ngắm
+}
+
+// ==========================
+// 5. Giới hạn không vượt quá đỉnh đầu
+// ==========================
+function clampAimToHead(currentPos, headPos) {
+    let clamped = { ...currentPos };
+    if (clamped.y > headPos.y) {
+        clamped.y = headPos.y;
+    }
+    return clamped;
+}
+
+// ==========================
+// 6. Tự động căn chỉnh bắn chính xác
+// ==========================
+function autoPrecisionHeadshot() {
+    if (isHeadLocked) {
+        aimTo(enemyHeadData.position);
+    }
+}
+
+// ==========================
+// 7. Xử lý khi drag di chuyển
+// ==========================
+function onDragMove(newAimPos) {
+    newAimPos = clampAimToHead(newAimPos, enemyHeadData.position);
+
+    if (!isHeadLocked) {
+        const dist = Vector3.distance(newAimPos, enemyHeadData.position);
+        if (dist < 0.05) {
+            isHeadLocked = true;
+            console.log("🔒 Locked on enemy head!");
+        }
+    }
+
+    if (isHeadLocked) {
+        aimTo(enemyHeadData.position);
+    } else {
+        aimTo(newAimPos);
+    }
+}
+
+// ==========================
+// 8. Giả lập input drag và bắn
+// ==========================
+
+// Hàm giả lập bắt đầu kéo
+function startDrag() {
+    isDragging = true;
+}
+
+// Hàm giả lập thả kéo
+function endDrag() {
+    isDragging = false;
+    isHeadLocked = true;
+}
+
+// Hàm giả lập di chuyển drag
+function moveDrag(x, y) {
+    if (!isDragging) return;
+    currentAimPos = { x: x, y: y, z: 0 };
+    onDragMove(currentAimPos);
+}
+
+// Hàm giả lập nhấn bắn
+function startShooting() {
+    isShooting = true;
+    autoPrecisionHeadshot();
+}
+
+// Hàm giả lập nhả bắn
+function stopShooting() {
+    isShooting = false;
+}
+
+// ==========================
+// 9. Vòng lặp game tick
+// ==========================
+setInterval(() => {
+    if (isShooting && isHeadLocked) {
+        autoPrecisionHeadshot();
+    }
+}, 16);
+
+// ==========================
+// 10. Giả lập enemy di chuyển khi lock
+// ==========================
+setInterval(() => {
+    if (isHeadLocked) {
+        enemyHeadData.position.x += (Math.random() - 0.5) * 0.01;
+        enemyHeadData.position.y += (Math.random() - 0.5) * 0.01;
+    }
+}, 100);
+
+// ==========================
+// 11. Ví dụ chạy thử
+// ==========================
+startDrag();
+moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
+startShooting();
+// Hàm chuyển quaternion thành vector hướng
 function quaternionToVectors(q) {
     // forward vector
     let forward = {
@@ -509,6 +612,20 @@ function updateHeadshotZone(boneHead) {
     headshotPriorityZone.yMin = headCenter.y - halfHeight;
     headshotPriorityZone.yMax = headCenter.y + halfHeight;
 }
+
+// Ví dụ sử dụng
+let boneHead = {
+    position: { x: -0.0456970781, y: -0.004478302, z: -0.0200432576 },
+    rotation: {
+        x: 0.0258174837,
+        y: -0.08611039,
+        z: -0.1402113,
+        w: 0.9860321
+    }
+};
+
+updateHeadshotZone(boneHead);
+console.log("Vùng headshot mới:", headshotPriorityZone);
 
 function enhancedBlendTargets(head, neck, chest, weapon) {
     const track = config.tracking[weapon] || config.tracking.default;
@@ -1022,6 +1139,8 @@ function applyHeadLockDragOverride(target, crosshairPos) {
     }
     return null;
 }
+
+// ====== Trong loop aim ======
 let overrideAimPos = applyHeadLockDragOverride(currentTarget, getCrosshairPosition());
 if (overrideAimPos) {
     // Gán thẳng aim vào đầu, bỏ qua body/chest logic
@@ -1132,132 +1251,15 @@ function update(cameraPos, headPos, isFiring) {
         triggerFire();
     }
 }
-// ==========================
-// 4. Hàm di chuyển aim
-// ==========================
-function aimTo(vec3) {
-    console.log(`🎯 AimTo -> X=${vec3.x.toFixed(3)}, Y=${vec3.y.toFixed(3)}, Z=${vec3.z.toFixed(3)}`);
-    // TODO: Hook API game để di chuyển tâm ngắm
-}
 
-// ==========================
-// 5. Giới hạn không vượt quá đỉnh đầu
-// ==========================
-function clampAimToHead(currentPos, headPos) {
-    let clamped = { ...currentPos };
-    if (clamped.y > headPos.y) {
-        clamped.y = headPos.y;
-    }
-    return clamped;
-}
+// Ví dụ chạy
+let cam = new Vector3(0, 0, 0);
+let head = new Vector3(-0.04089227, 0.00907892, 0.02748467);
 
-// ==========================
-// 6. Tự động căn chỉnh bắn chính xác
-// ==========================
-function autoPrecisionHeadshot() {
-    if (isHeadLocked) {
-        aimTo(enemyHeadData.position);
-    }
-}
-
-// ==========================
-// 7. Xử lý khi drag di chuyển
-// ==========================
-function onDragMove(newAimPos) {
-    newAimPos = clampAimToHead(newAimPos, enemyHeadData.position);
-
-    if (!isHeadLocked) {
-        const dist = Vector3.distance(newAimPos, enemyHeadData.position);
-        if (dist < 0.001) {
-            isHeadLocked = true;
-            console.log("🔒 Locked on enemy head!");
-        }
-    }
-
-    if (isHeadLocked) {
-        aimTo(enemyHeadData.position);
-    } else {
-        aimTo(newAimPos);
-    }
-}
-
-// ==========================
-// 8. Giả lập input drag và bắn
-// ==========================
-
-// Hàm giả lập bắt đầu kéo
-function startDrag() {
-    isDragging = true;
-}
-
-// Hàm giả lập thả kéo
-function endDrag() {
-    isDragging = false;
-    isHeadLocked = true;
-}
-
-// Hàm giả lập di chuyển drag
-function moveDrag(x, y) {
-    if (!isDragging) return;
-    currentAimPos = { x: x, y: y, z: 0 };
-    onDragMove(currentAimPos);
-}
-
-// Hàm giả lập nhấn bắn
-function startShooting() {
-    isShooting = true;
-    autoPrecisionHeadshot();
-}
-
-// Hàm giả lập nhả bắn
-function stopShooting() {
-    isShooting = false;
-}
-
-// ==========================
-// 9. Vòng lặp game tick
-// ==========================
-setInterval(() => {
-    if (isShooting && isHeadLocked) {
-        autoPrecisionHeadshot();
-    }
-}, 16);
-
-// ==========================
-// 10. Giả lập enemy di chuyển khi lock
-// ==========================
-setInterval(() => {
-    if (isHeadLocked) {
-        enemyHeadData.position.x += (Math.random() - 0.5) * 0.01;
-        enemyHeadData.position.y += (Math.random() - 0.5) * 0.01;
-    }
-}, 100);
+// Mô phỏng bắn liên tục
 setInterval(() => {
     update(cam, head, true);
 }, 16); // ~60fps
-// ==========================
-// 11. Ví dụ chạy thử
-// ==========================
-startDrag();
-moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
-startShooting();
-// Hàm chuyển quaternion thành vector hướng
-updateHeadshotZone(boneHead);
-console.log("Vùng headshot mới:", headshotPriorityZone);
-// Ví dụ sử dụng
-
-
-
-
-
-// ====== Trong loop aim ======
-
-
-// Ví dụ chạy
-
-
-// Mô phỏng bắn liên tục
-
 // === Core Functions ===
 function fixBulletDrift(targetPos, playerPos, bulletSpeed = 95, predictionFactor = 1.0) {
     const direction = {
