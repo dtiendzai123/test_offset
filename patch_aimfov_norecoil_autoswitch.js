@@ -1399,6 +1399,55 @@ if (target) {
   cameraLookAt(enemyHeadData.position.x, enemyHeadData.position.y, enemyHeadData.position.z);
 }
     return magneticAimChestToHead(smoothedAim, chestPos, headPos, isDynamicLock, isRedDotActive);
+// === CONFIG TOUCH PRECISION ===
+CONFIG.TOUCH_PRECISION_MODE = true;
+CONFIG.TOUCH_LOCK_HEAD_ONLY = true; // Chỉ lock vào đầu khi touch
+CONFIG.TOUCH_PRIORITY_DISTANCE = 3.0; // Ưu tiên đầu khi tâm ngắm gần < 3m
+
+// Lưu trạng thái drag
+let isTouching = false;
+let touchAimTarget = null;
+
+// Giả lập sự kiện touch từ dữ liệu game (không dùng document)
+function onTouchStart(simTouchData) {
+    isTouching = true;
+
+    // Nếu đang chạm thì chọn mục tiêu gần nhất
+    if (CONFIG.TOUCH_PRECISION_MODE) {
+        let nearest = TargetManager.getNearestTarget();
+        if (nearest) {
+            // Ưu tiên đầu nếu trong khoảng
+            let headPos = nearest.getBone("Head");
+            let dist = Vector3.distance(Player.getCrosshairPos(), headPos);
+
+            if (dist <= CONFIG.TOUCH_PRIORITY_DISTANCE || CONFIG.TOUCH_LOCK_HEAD_ONLY) {
+                touchAimTarget = headPos;
+            } else {
+                touchAimTarget = nearest.getBone("Chest");
+            }
+        }
+    }
+}
+
+function onTouchMove(simTouchData) {
+    if (!isTouching || !touchAimTarget) return;
+
+    // Khi đang drag => luôn aim vào vị trí target được chọn
+    AimLockEngine.setAimTarget(touchAimTarget, {
+        instant: true, // Không smooth => chính xác ngay lập tức
+        noRecoil: true // Giữ nguyên không rung
+    });
+}
+
+function onTouchEnd() {
+    isTouching = false;
+    touchAimTarget = null;
+}
+
+// === Tích hợp vào Game Loop ===
+GameLoop.on("touchStart", onTouchStart);
+GameLoop.on("touchMove", onTouchMove);
+GameLoop.on("touchEnd", onTouchEnd);
 }
 
 function magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isRedDotActive) {
