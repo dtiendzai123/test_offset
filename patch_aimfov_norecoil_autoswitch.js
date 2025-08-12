@@ -441,7 +441,15 @@ let enemyHeadData = {
         z: -0.0200432576
     }
 };
-
+let boneHead = {
+    position: { x: -0.0456970781, y: -0.004478302, z: -0.0200432576 },
+    rotation: {
+        x: 0.0258174837,
+        y: -0.08611039,
+        z: -0.1402113,
+        w: 0.9860321
+    }
+};
 // ==========================
 // 2. Biến trạng thái lock
 // ==========================
@@ -453,6 +461,53 @@ let currentAimPos = { x: -0.128512, y: 0.0, z: 0.0 };
 // ==========================
 // 3. Vector3 - Tính khoảng cách
 // ==========================
+function quaternionToVectors(q) {
+    // forward vector
+    let forward = {
+        x: 2 * (q.x * q.z + q.w * q.y),
+        y: 2 * (q.y * q.z - q.w * q.x),
+        z: 1 - 2 * (q.x * q.x + q.y * q.y)
+    };
+    // up vector
+    let up = {
+        x: 2 * (q.x * q.y - q.w * q.z),
+        y: 1 - 2 * (q.x * q.x + q.z * q.z),
+        z: 2 * (q.y * q.z + q.w * q.x)
+    };
+    // right vector
+    let right = {
+        x: 1 - 2 * (q.y * q.y + q.z * q.z),
+        y: 2 * (q.x * q.y + q.w * q.z),
+        z: 2 * (q.x * q.z - q.w * q.y)
+    };
+    return { forward, up, right };
+}
+
+// Giả lập hàm worldToScreen
+function worldToScreen(pos) {
+    // Ở đây bạn sẽ dùng API/game engine để convert 3D -> 2D
+    // Mình để ví dụ giả lập
+    return { x: pos.x * 100, y: pos.y * 100 };
+}
+
+// Cập nhật vùng headshot theo rotation
+function updateHeadshotZone(boneHead) {
+    let q = boneHead.rotation;
+    let { up, right } = quaternionToVectors(q);
+
+    // Tâm đầu ở screen space
+    let headCenter = worldToScreen(boneHead.position);
+
+    // Kích thước vùng headshot (theo tỉ lệ màn hình)
+    let halfWidth = 0.05;  // 5% màn hình
+    let halfHeight = 0.075; // 7.5% màn hình
+
+    // Điều chỉnh vùng theo hướng đầu
+    headshotPriorityZone.xMin = headCenter.x - halfWidth;
+    headshotPriorityZone.xMax = headCenter.x + halfWidth;
+    headshotPriorityZone.yMin = headCenter.y - halfHeight;
+    headshotPriorityZone.yMax = headCenter.y + halfHeight;
+}
 
 
 // ==========================
@@ -563,67 +618,12 @@ startDrag();
 moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
 startShooting();
 // Hàm chuyển quaternion thành vector hướng
-function quaternionToVectors(q) {
-    // forward vector
-    let forward = {
-        x: 2 * (q.x * q.z + q.w * q.y),
-        y: 2 * (q.y * q.z - q.w * q.x),
-        z: 1 - 2 * (q.x * q.x + q.y * q.y)
-    };
-    // up vector
-    let up = {
-        x: 2 * (q.x * q.y - q.w * q.z),
-        y: 1 - 2 * (q.x * q.x + q.z * q.z),
-        z: 2 * (q.y * q.z + q.w * q.x)
-    };
-    // right vector
-    let right = {
-        x: 1 - 2 * (q.y * q.y + q.z * q.z),
-        y: 2 * (q.x * q.y + q.w * q.z),
-        z: 2 * (q.x * q.z - q.w * q.y)
-    };
-    return { forward, up, right };
-}
-
-// Giả lập hàm worldToScreen
-function worldToScreen(pos) {
-    // Ở đây bạn sẽ dùng API/game engine để convert 3D -> 2D
-    // Mình để ví dụ giả lập
-    return { x: pos.x * 100, y: pos.y * 100 };
-}
-
-// Cập nhật vùng headshot theo rotation
-function updateHeadshotZone(boneHead) {
-    let q = boneHead.rotation;
-    let { up, right } = quaternionToVectors(q);
-
-    // Tâm đầu ở screen space
-    let headCenter = worldToScreen(boneHead.position);
-
-    // Kích thước vùng headshot (theo tỉ lệ màn hình)
-    let halfWidth = 0.05;  // 5% màn hình
-    let halfHeight = 0.075; // 7.5% màn hình
-
-    // Điều chỉnh vùng theo hướng đầu
-    headshotPriorityZone.xMin = headCenter.x - halfWidth;
-    headshotPriorityZone.xMax = headCenter.x + halfWidth;
-    headshotPriorityZone.yMin = headCenter.y - halfHeight;
-    headshotPriorityZone.yMax = headCenter.y + halfHeight;
-}
-
-// Ví dụ sử dụng
-let boneHead = {
-    position: { x: -0.0456970781, y: -0.004478302, z: -0.0200432576 },
-    rotation: {
-        x: 0.0258174837,
-        y: -0.08611039,
-        z: -0.1402113,
-        w: 0.9860321
-    }
-};
-
 updateHeadshotZone(boneHead);
 console.log("Vùng headshot mới:", headshotPriorityZone);
+// Ví dụ sử dụng
+
+
+
 
 function enhancedBlendTargets(head, neck, chest, weapon) {
     const track = config.tracking[weapon] || config.tracking.default;
