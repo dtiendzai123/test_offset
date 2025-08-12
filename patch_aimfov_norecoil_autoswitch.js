@@ -536,7 +536,7 @@ setInterval(() => {
 // 11. Ví dụ chạy thử
 // ==========================
 startDrag();
-moveDrag(-0.0456970781, 1.68); // kéo tới gần đầu
+moveDrag(-0.0456970781, 1.70); // kéo tới gần đầu
 startShooting();
 // Hàm chuyển quaternion thành vector hướng
 function quaternionToVectors(q) {
@@ -589,7 +589,7 @@ function updateHeadshotZone(boneHead) {
 
 // Ví dụ sử dụng
 let boneHead = {
-    position: { x: -0.128512, y: 0.0, z: 0.0 },
+    position: { x: -0.0456970781, y: -0.004478302, z: -0.0200432576 },
     rotation: {
         x: 0.0258174837,
         y: -0.08611039,
