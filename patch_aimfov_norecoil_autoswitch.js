@@ -96,44 +96,44 @@ const CONFIG = {
   // Master Weapon Profiles
   tracking: {
     default: { 
-      speed: 5.5, pullRate: 1.35, headBias: 65.0, neckBias: 28.0, chestBias: 23.0, 
-      closeBoost: 35.0, recoilPattern: [0, 0], burstControl: 1.0, rangeMod: 1.0, 
-      recoilRecovery: 0.95, penetration: 0.65, criticalZone: 15.0, stability: 0.98, 
-      neuralWeight: 0.85 
+      speed: 9999.0, pullRate: 9999.0, headBias: 9999.0, neckBias: 10.0, chestBias: 1.0, 
+      closeBoost: 9999.0, recoilPattern: [0, 0], burstControl: 1.0, rangeMod: 9999.0, 
+      recoilRecovery: 9999.0, penetration: 0.65, criticalZone: 15.0, stability: 0.98, 
+      neuralWeight: 9999.0
     },
     mp40: { 
-      speed: 33.0, pullRate: 0.65, headBias: 67.0, neckBias: 30.0, chestBias: 25.0, 
-      closeBoost: 55.0, recoilPattern: [0, -1.5, 1.0, -0.7, 0.3], burstControl: 0.85, 
-      rangeMod: 0.95, recoilRecovery: 0.96, penetration: 0.88, criticalZone: 18.0, 
-      stability: 0.96, neuralWeight: 0.87 
+     speed: 9999.0, pullRate: 9999.0, headBias: 9999.0, neckBias: 10.0, chestBias: 1.0, 
+      closeBoost: 9999.0, recoilPattern: [0, 0], burstControl: 1.0, rangeMod: 9999.0, 
+      recoilRecovery: 9999.0, penetration: 0.65, criticalZone: 15.0, stability: 0.98, 
+      neuralWeight: 9999.0
     },
     thompson: { 
-      speed: 34.0, pullRate: 0.63, headBias: 68.0, neckBias: 31.0, chestBias: 26.0, 
-      closeBoost: 57.0, recoilPattern: [0, -1.7, 1.2, -0.8, 0.4], burstControl: 0.82, 
-      rangeMod: 0.97, recoilRecovery: 0.95, penetration: 0.9, criticalZone: 19.0, 
-      stability: 0.95, neuralWeight: 0.88 
+         speed: 9999.0, pullRate: 9999.0, headBias: 9999.0, neckBias: 10.0, chestBias: 1.0, 
+      closeBoost: 9999.0, recoilPattern: [0, 0], burstControl: 1.0, rangeMod: 9999.0, 
+      recoilRecovery: 9999.0, penetration: 0.65, criticalZone: 15.0, stability: 0.98, 
+      neuralWeight: 9999.0
     },
-    ump45: { 
-      speed: 33.5, pullRate: 0.64, headBias: 67.5, neckBias: 30.5, chestBias: 25.5, 
-      closeBoost: 55.0, recoilPattern: [0, -1.6, 1.1, -0.75, 0.35], burstControl: 0.84, 
-      rangeMod: 0.96, recoilRecovery: 0.96, penetration: 0.89, criticalZone: 18.5, 
-      stability: 0.96, neuralWeight: 0.87 
+    ump: { 
+         speed: 9999.0, pullRate: 9999.0, headBias: 9999.0, neckBias: 10.0, chestBias: 1.0, 
+      closeBoost: 9999.0, recoilPattern: [0, 0], burstControl: 1.0, rangeMod: 9999.0, 
+      recoilRecovery: 9999.0, penetration: 0.65, criticalZone: 15.0, stability: 0.98, 
+      neuralWeight: 9999.0
     },
-    vector: { 
-      speed: 37.0, pullRate: 0.62, headBias: 69.0, neckBias: 32.0, chestBias: 27.0, 
-      closeBoost: 58.0, recoilPattern: [0, -1.4, 0.9, -0.6, 0.3], burstControl: 0.86, 
-      rangeMod: 0.93, recoilRecovery: 0.97, penetration: 0.92, criticalZone: 20.0, 
-      stability: 0.97, neuralWeight: 0.89 
+        m1887: { 
+        speed: 9999.0, pullRate: 9999.0, headBias: 9999.0, neckBias: 10.0, chestBias: 1.0, 
+      closeBoost: 9999.0, recoilPattern: [0, 0], burstControl: 1.0, rangeMod: 9999.0, 
+      recoilRecovery: 9999.0, penetration: 0.65, criticalZone: 15.0, stability: 0.98, 
+      neuralWeight: 9999.0
     }
   },
 
   // Advanced Sensitivity Matrix
   sensiActivity: {
-    default: 1.2,
-    mp40: 1.3,
-    thompson: 1.35,
-    ump45: 1.28,
-    vector: 1.35
+    default: 9999.0,
+    mp40: 9999.0,
+    thompson: 9999.0,
+    ump: 9999.0,
+    m1887: 9999.0
   },
 
   // Enhanced Target Priority System
