@@ -1402,7 +1402,7 @@ if (target) {
 // === CONFIG TOUCH PRECISION ===
 CONFIG.TOUCH_PRECISION_MODE = true;
 CONFIG.TOUCH_LOCK_HEAD_ONLY = true; // Chỉ lock vào đầu khi touch
-CONFIG.TOUCH_PRIORITY_DISTANCE = 3.0; // Ưu tiên đầu khi tâm ngắm gần < 3m
+CONFIG.TOUCH_PRIORITY_DISTANCE = Infinity; // Ưu tiên đầu khi tâm ngắm gần < 3m
 
 // Lưu trạng thái drag
 let isTouching = false;
