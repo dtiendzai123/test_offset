@@ -229,6 +229,51 @@ try {
     json = null; // Nếu không phải JSON thì để null, các patch phía dưới sẽ xử lý raw body
 }
 
+// === SAFETY DEFAULTS (avoid ReferenceError) ===
+// Khởi tạo vùng headshot nếu chưa có
+if (typeof headshotPriorityZone === 'undefined') {
+    var headshotPriorityZone = { xMin: 0, xMax: 0, yMin: 0, yMax: 0 };
+}
+// Nếu không có config khác, ánh xạ config toàn cục vào CONFIG
+if (typeof config === 'undefined') {
+    var config = typeof CONFIG !== 'undefined' ? CONFIG : {};
+}
+// Khởi tạo gameState mặc định
+if (typeof gameState === 'undefined') {
+    var gameState = {
+        performanceProfile: { fps: 60, latency: 0, magicTrickConfidence: 0 },
+        recoilState: { shotCount: 0, lastShot: 0, weapon: null },
+        magicTrickState: { magicConfidence: 0, lastHeadLock: 0, activeTarget: null },
+        targetMemory: new Map(),
+        aiMemory: new Map(),
+        neuralNetwork: { weights: new Map(), activations: [] },
+        triggerState: { lastTrigger: 0, burstCount: 0 },
+        lastAim: { x: 0, y: 0 }
+    };
+}
+// Một số hàm tiện ích nếu chưa tồn tại
+if (typeof getCrosshairPosition === 'undefined') {
+    var getCrosshairPosition = function() { return { x: 0, y: 0, z: 0 }; };
+}
+if (typeof currentTarget === 'undefined') {
+    var currentTarget = null;
+}
+// Một số hằng số cấu hình bổ sung nếu chưa có
+if (typeof CONFIG !== 'undefined') {
+    if (typeof CONFIG.headSnapRadius === 'undefined') CONFIG.headSnapRadius = 0.05;
+    if (typeof CONFIG.chestSnapRadius === 'undefined') CONFIG.chestSnapRadius = 0.12;
+    if (typeof CONFIG.HEAD_SNAP_RADIUS === 'undefined') CONFIG.HEAD_SNAP_RADIUS = CONFIG.headSnapRadius;
+    if (typeof CONFIG.DRAG_HEAD_LOCK_ENABLED === 'undefined') CONFIG.DRAG_HEAD_LOCK_ENABLED = true;
+    if (typeof CONFIG.DRAG_HEAD_LOCK_RADIUS === 'undefined') CONFIG.DRAG_HEAD_LOCK_RADIUS = 0.3;
+    if (typeof CONFIG.AUTO_FIRE === 'undefined') CONFIG.AUTO_FIRE = CONFIG.AUTO_FIRE || { enabled: true, minLockConfidence: 0.0 };
+}
+// Tránh ghi đè triggerFire nếu đã có; nếu chưa có thì tạo một stub
+if (typeof triggerFire === 'undefined') {
+    function triggerFire() { console.log("🔫 Fire Triggered (stub)"); }
+}
+// Nếu có hàm aimTo được định nghĩa nhiều lần, không cần tạo ở đây.
+// End safety defaults
+
 
 // Convert hex pattern to buffer
 function patchBinary(base64, findHex, replaceHex) {
