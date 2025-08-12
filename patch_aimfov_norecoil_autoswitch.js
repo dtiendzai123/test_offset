@@ -448,7 +448,7 @@ let enemyHeadData = {
 let isHeadLocked = true;
 let isDragging = false;
 let isShooting = false;
-let currentAimPos = { x: 0, y: 0, z: 0 };
+let currentAimPos = { x: -0.128512, y: 0.0, z: 0.0 };
 
 // ==========================
 // 3. Vector3 - Tính khoảng cách
@@ -491,7 +491,7 @@ function onDragMove(newAimPos) {
 
     if (!isHeadLocked) {
         const dist = Vector3.distance(newAimPos, enemyHeadData.position);
-        if (dist < 0.05) {
+        if (dist < 0.001) {
             isHeadLocked = true;
             console.log("🔒 Locked on enemy head!");
         }
