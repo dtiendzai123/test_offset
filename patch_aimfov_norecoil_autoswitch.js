@@ -33,7 +33,7 @@ const CONFIG = {
   aimLockHead: true,
   headLockFov: 520,
   aimFov: 380,
-  predictiveMultiplier: 0.1,
+  predictiveMultiplier: 0.001,
   superHeadLock: 9999.0,
   aimSmoothnessNear: 0.00001,
   aimSmoothnessFar: 0.00001,
