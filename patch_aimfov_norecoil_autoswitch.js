@@ -4,46 +4,6 @@
 // @match        *api.ff.garena.com*
 // @run-at       response
 // ==/UserScript==
-
-// === CUSTOM FF CONFIG SETTINGS ===
-const useJailbreakMode = true;
-const ffConfigType = "plist";
-const ffConfigPath = "/var/mobile/Containers/Data/Application/Dán uuid ở đây/Documents/config.plist";
-
-
-
-// === STUB: FF Config Load/Save for Shadowrocket ===
-function loadFFConfig() {
-    if (!useJailbreakMode) {
-        console.log("[FF-CONFIG] Jailbreak mode disabled, skip load.");
-        return null;
-    }
-    console.log(`[FF-CONFIG] (Stub) Would load ${ffConfigPath} of type ${ffConfigType}`);
-    // Giả lập dữ liệu plist
-    return {
-        aimSettings: { enabled: true, aimFOV: CONFIG.DEFAULT_AIMFOV },
-        noRecoil: CONFIG.NO_RECOIL
-    };
-}
-
-function saveFFConfig(data) {
-    if (!useJailbreakMode) {
-        console.log("[FF-CONFIG] Jailbreak mode disabled, skip save.");
-        return;
-    }
-    console.log(`[FF-CONFIG] (Stub) Would save config to ${ffConfigPath}:`, JSON.stringify(data));
-}
-
-function patchFFConfig(data) {
-    if (!data) return null;
-    console.log("[FF-CONFIG] (Stub) Applying patch to config data...");
-    if (!data.aimSettings) data.aimSettings = {};
-    data.aimSettings.enabled = true;
-    data.aimSettings.aimFOV = CONFIG.DEFAULT_AIMFOV;
-    data.aimSettings.noRecoil = CONFIG.NO_RECOIL;
-    return data;
-}
-
 const CONFIG = {
   lockHoldTime: 9999,   // ms giữ lock khi đã ở đầu
   AUTO_SWITCH: true,
@@ -1399,55 +1359,6 @@ if (target) {
   cameraLookAt(enemyHeadData.position.x, enemyHeadData.position.y, enemyHeadData.position.z);
 }
     return magneticAimChestToHead(smoothedAim, chestPos, headPos, isDynamicLock, isRedDotActive);
-// === CONFIG TOUCH PRECISION ===
-CONFIG.TOUCH_PRECISION_MODE = true;
-CONFIG.TOUCH_LOCK_HEAD_ONLY = true; // Chỉ lock vào đầu khi touch
-CONFIG.TOUCH_PRIORITY_DISTANCE = Infinity; // Ưu tiên đầu khi tâm ngắm gần < 3m
-
-// Lưu trạng thái drag
-let isTouching = false;
-let touchAimTarget = null;
-
-// Giả lập sự kiện touch từ dữ liệu game (không dùng document)
-function onTouchStart(simTouchData) {
-    isTouching = true;
-
-    // Nếu đang chạm thì chọn mục tiêu gần nhất
-    if (CONFIG.TOUCH_PRECISION_MODE) {
-        let nearest = TargetManager.getNearestTarget();
-        if (nearest) {
-            // Ưu tiên đầu nếu trong khoảng
-            let headPos = nearest.getBone("Head");
-            let dist = Vector3.distance(Player.getCrosshairPos(), headPos);
-
-            if (dist <= CONFIG.TOUCH_PRIORITY_DISTANCE || CONFIG.TOUCH_LOCK_HEAD_ONLY) {
-                touchAimTarget = headPos;
-            } else {
-                touchAimTarget = nearest.getBone("Chest");
-            }
-        }
-    }
-}
-
-function onTouchMove(simTouchData) {
-    if (!isTouching || !touchAimTarget) return;
-
-    // Khi đang drag => luôn aim vào vị trí target được chọn
-    AimLockEngine.setAimTarget(touchAimTarget, {
-        instant: true, // Không smooth => chính xác ngay lập tức
-        noRecoil: true // Giữ nguyên không rung
-    });
-}
-
-function onTouchEnd() {
-    isTouching = false;
-    touchAimTarget = null;
-}
-
-// === Tích hợp vào Game Loop ===
-GameLoop.on("touchStart", onTouchStart);
-GameLoop.on("touchMove", onTouchMove);
-GameLoop.on("touchEnd", onTouchEnd);
 }
 
 function magneticAimChestToHead(crosshair, chestPos, headPos, isDynamicLock, isRedDotActive) {
