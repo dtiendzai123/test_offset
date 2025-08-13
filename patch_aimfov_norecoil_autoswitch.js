@@ -493,7 +493,7 @@ let enemyHeadData = {
 let isHeadLocked = true;
 let isDragging = false;
 let isShooting = false;
-let currentAimPos = { x: 0, y: 0, z: 0 };
+let currentAimPos = { x: -0.04089227, y: 0.00907892, z: 0.02748467 };
 
 // ==========================
 // 3. Vector3 - Tính khoảng cách
